@@ -12,6 +12,8 @@ require([
     "dojo/domReady!"
 
 ], function(Map, MapView, FeatureLayer, VectorTileLayer, SimpleLineSymbol, watchUtils, webMercatorUtils, Point, dom) {
+    const sampleURL = 'https://services.arcgis.com/P3ePLMYs2RVChkJx/arcgis/rest/services/World_Countries_(Generalized)/FeatureServer/0';
+
     //global vars
     var mapLongLattZoom = [0, 0, 1] //default
     var endNo //highest number in the attribute
@@ -84,7 +86,7 @@ require([
 
     //if there's no paramaters, then add these in as a default.
     function defaultService() {
-        document.getElementById("fs-url").value = "https://services.arcgis.com/Qo2anKIAMzIEkIJB/arcgis/rest/services/hurricanes/FeatureServer/0"
+        document.getElementById("fs-url").value = sampleURL;
         document.getElementById("animation-time").value = 10
     }
 
