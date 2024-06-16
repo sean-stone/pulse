@@ -134,8 +134,7 @@ require([
         $.ajax({
             url: flURL + "?f=json",
             type: "GET"
-        }).done(function(FLfields) {
-            var fieldsObj = JSON.parse(FLfields)
+        }).done(function(fieldsObj) {
             document.getElementById("feature-layer-name").innerHTML = fieldsObj.name
             updateExtent(fieldsObj.extent)
             select = document.getElementById('selection')
@@ -220,9 +219,7 @@ require([
                     '", "outStatisticFieldName":"MinID"},{"statisticType":"max","onStatisticField":"' +
                     field + '", "outStatisticFieldName":"MaxID"}]'
             }
-        }).done(function(data) {
-            var dataJSONObj = JSON.parse(data)
-
+        }).done(function(dataJSONObj) {
             fieldToAnimate = field
             startNumber(dataJSONObj.features[0].attributes.MinID)
             endNo = dataJSONObj.features[0].attributes.MaxID
