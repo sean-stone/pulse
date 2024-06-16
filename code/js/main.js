@@ -3,8 +3,10 @@ require([
     "esri/views/MapView",
     "esri/layers/FeatureLayer",
     "esri/core/reactiveUtils",
-    "esri/geometry/Point"
-], function (Map, MapView, FeatureLayer, reactiveUtils, Point) {
+    "esri/geometry/Point",
+    "esri/request",
+    "esri/rest/support/Query"
+], function (Map, MapView, FeatureLayer, reactiveUtils, Point, esriRequest, Query) {
     const sampleURL = 'https://services.arcgis.com/P3ePLMYs2RVChkJx/arcgis/rest/services/World_Countries_(Generalized)/FeatureServer/0';
 
     // Globals
@@ -23,6 +25,7 @@ require([
     let geometryType;
     let newSymbol;
     let newType;
+    let featureLayer;
 
     // DOM Elements
     const urlElement = document.getElementById('fs-url');
@@ -126,10 +129,11 @@ require([
 
     //populating selection drop down based on featurelayer.
     function getFields(flURL) {
-        $.ajax({
-            url: flURL + "?f=json",
-            type: "GET"
-        }).done(function (fieldsObj) {
+        console.log(flURL)
+        esriRequest(flURL + "?f=json", {
+            responseType: "json"
+        }).then((response) => {
+            const fieldsObj = response.data;
             document.getElementById("feature-layer-name").innerHTML = fieldsObj.name
             updateExtent(fieldsObj.extent)
             select = document.getElementById('selection')
@@ -202,36 +206,43 @@ require([
     }
 
     function getMaxMin() {
-        let flURL = urlElement.value
-        let field = document.getElementById("selection").value
+        let field = document.getElementById("selection").value;
 
-        $.ajax({
-            url: flURL + "/query",
-            type: "GET",
-            data: {
-                'f': 'pjson',
-                'outStatistics': '[{"statisticType":"min","onStatisticField":"' + field +
-                    '", "outStatisticFieldName":"MinID"},{"statisticType":"max","onStatisticField":"' +
-                    field + '", "outStatisticFieldName":"MaxID"}]'
-            }
-        }).done(function (dataJSONObj) {
-            fieldToAnimate = field
-            startNumber(dataJSONObj.features[0].attributes.MinID)
-            endNo = dataJSONObj.features[0].attributes.MaxID
+        // query for the sum of the population in all features
+        let minQuery = {
+            onStatisticField: field,  // service field for 2015 population
+            outStatisticFieldName: "MinID",
+            statisticType: "min"
+        };
 
-            //generate step number here too
-            let difference = Math.abs(dataJSONObj.features[0].attributes.MinID - dataJSONObj.features[
-                0].attributes.MaxID)
-            let differencePerSecond = difference / animationTimeElement.value
-            stepNumber = differencePerSecond / setIntervalSpeed
-            startNo = dataJSONObj.features[0].attributes.MinID
-            animate(dataJSONObj.features[0].attributes.MinID)
+        // query for the average population in all features
+        let maxQuery = {
+            onStatisticField: field,  // service field for 2015 population
+            outStatisticFieldName: "MaxID",
+            statisticType: "max"
+        };
 
-            //adding empty frames at the start and end for fade in/out
-            endNo += stepNumber * 40
-            startNo -= stepNumber * 2
-        });
+        let query = featureLayer.createQuery();
+        query.where = "1 = 1";
+        query.outStatistics = [minQuery, maxQuery];
+        featureLayer.queryFeatures(query)
+            .then(function (dataJSONObj) {
+                fieldToAnimate = field
+                startNumber(dataJSONObj.features[0].attributes.MinID)
+                endNo = dataJSONObj.features[0].attributes.MaxID
 
+                //generate step number here too
+                let difference = Math.abs(dataJSONObj.features[0].attributes.MinID - dataJSONObj.features[
+                    0].attributes.MaxID)
+                let differencePerSecond = difference / animationTimeElement.value
+                stepNumber = differencePerSecond / setIntervalSpeed
+                startNo = dataJSONObj.features[0].attributes.MinID
+                animate(dataJSONObj.features[0].attributes.MinID)
+
+                //adding empty frames at the start and end for fade in/out
+                endNo += stepNumber * 40;
+                startNo -= stepNumber * 2;
+            });
     }
 
     function stopAnimation() {
