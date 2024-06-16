@@ -2,10 +2,9 @@ require([
     "esri/Map",
     "esri/views/MapView",
     "esri/layers/FeatureLayer",
-    "esri/core/watchUtils",
-    "esri/geometry/Point",
-    "dojo/domReady!"
-], function(Map, MapView, FeatureLayer, watchUtils, Point) {
+    "esri/core/reactiveUtils",
+    "esri/geometry/Point"
+], function(Map, MapView, FeatureLayer, reactiveUtils, Point) {
     const sampleURL = 'https://services.arcgis.com/P3ePLMYs2RVChkJx/arcgis/rest/services/World_Countries_(Generalized)/FeatureServer/0';
 
     //global vars
@@ -62,7 +61,9 @@ require([
         }
 
         view.when(function() {
-            watchUtils.when(view, "stationary", updateMapLongLatt)
+            reactiveUtils.when(
+                () => view.stationary === true,
+                () => updateMapLongLatt)
             
             var pt = new Point({
                 longitude: mapLongLattZoom[0],
