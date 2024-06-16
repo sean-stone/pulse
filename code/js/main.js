@@ -1,17 +1,11 @@
 require([
-
     "esri/Map",
     "esri/views/MapView",
     "esri/layers/FeatureLayer",
-    "esri/layers/VectorTileLayer",
-    "esri/symbols/SimpleLineSymbol",
     "esri/core/watchUtils",
-    "esri/geometry/support/webMercatorUtils",
     "esri/geometry/Point",
-    "dojo/dom",
     "dojo/domReady!"
-
-], function(Map, MapView, FeatureLayer, VectorTileLayer, SimpleLineSymbol, watchUtils, webMercatorUtils, Point, dom) {
+], function(Map, MapView, FeatureLayer, watchUtils, Point) {
     const sampleURL = 'https://services.arcgis.com/P3ePLMYs2RVChkJx/arcgis/rest/services/World_Countries_(Generalized)/FeatureServer/0';
 
     //global vars
