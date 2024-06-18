@@ -5,7 +5,7 @@ require([
     'esri/core/reactiveUtils',
     'esri/request'
 ], function (Map, MapView, FeatureLayer, reactiveUtils, esriRequest) {
-    const sampleURL = 'https://services.arcgis.com/P3ePLMYs2RVChkJx/arcgis/rest/services/World_Countries_(Generalized)/FeatureServer/0';
+    const sampleURL = 'https://services9.arcgis.com/RHVPKKiFTONKtxq3/arcgis/rest/services/NOAA_METAR_current_wind_speed_direction_v1/FeatureServer/0';
 
     // Globals
     let xyz = [0, 0, 1];
@@ -59,7 +59,7 @@ require([
     }
 
     view.when(function () {
-        reactiveUtils.when(() => view.stationary === true, () => updateMapCoords);
+        reactiveUtils.when(() => view.stationary === true, () => updateMapCoords());
 
         const point = {
             type: "point",
