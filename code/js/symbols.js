@@ -16,6 +16,12 @@ define([], function () {
     polygon: {
       type: "simple-fill",
       color: "rgb(55, 55, 255)",
+      outline: {
+        type: "simple-line",
+        width: 0.1,
+        color: "rgb(55, 55, 255)",
+        opacity: 0.2,
+      }
     },
   };
 
