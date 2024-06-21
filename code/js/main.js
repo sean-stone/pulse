@@ -4,29 +4,41 @@ require([
   "esri/layers/FeatureLayer",
   "esri/core/reactiveUtils",
   "esri/request",
-], function (Map, MapView, FeatureLayer, reactiveUtils, esriRequest) {
+  "esri/core/urlUtils",
+  "esri/geometry/Extent",
+
+  //   Custom modules
+  "./js/symbols.js",
+], function (
+  Map,
+  MapView,
+  FeatureLayer,
+  reactiveUtils,
+  esriRequest,
+  urlUtils,
+  Extent,
+
+  symbols
+) {
+  const setIntervalSpeed = 16.6; //refresh speed in ms
   const sampleURL =
     "https://services9.arcgis.com/RHVPKKiFTONKtxq3/arcgis/rest/services/NOAA_METAR_current_wind_speed_direction_v1/FeatureServer/0";
 
   // Globals
-  let xyz = [0, 0, 1];
   let endNo; //highest number in the attribute
   let startNo; //lowest number in attribute
   let fieldToAnimate; //attribute selected
   let stepNumber; //increment value
-  let setIntervalSpeed = 16.6; //refresh speed in ms
   let restarting = false; //flag to control removing animation
-  let updateField = false; //check for attribute change
-  let intervalFunc; //animation interval name
   let overRidingField; //casts url field as no.1 selection in attribute selector
   let geometryType;
   let newSymbol;
-  let newType;
   let animatedFeatureLayer;
 
-  // DOM Elements
+  // DOM Elementsf
   const urlElement = document.getElementById("fs-url");
   const animationTimeElement = document.getElementById("animation-time");
+  const selectionElement = document.getElementById("selection");
 
   // Create map
   let map = new Map({
@@ -41,77 +53,103 @@ require([
   });
 
   // Event listeners
-  document.getElementById("play").addEventListener("click", play);
   urlElement.addEventListener("blur", addFeatureLayer);
   urlElement.addEventListener("change", addFeatureLayer);
+  selectionElement.addEventListener("change", updateDropdown);
 
-  // Check URL for paramaters, if there's some. Add it in.
-  let browserURL = window.location.search;
-  if (browserURL != "") {
-    updateField = true;
-    browserURL = browserURL.replace("?", "");
-    let partsOfStr = browserURL.split(",");
-    urlElement.value = partsOfStr[0];
-    overRidingField = partsOfStr[1];
-    animationTimeElement.value = partsOfStr[2];
-    xyz = [
-      parseInt(partsOfStr[3]),
-      parseInt(partsOfStr[4]),
-      parseInt(partsOfStr[5]),
-    ];
-  } else {
-    defaultService();
-  }
+  animationTimeElement.addEventListener("blur", updateDropdown);
 
   view.when(function () {
+    // Check URL for paramaters, if there's some. Add it in.
+    let browserURL = window.location.search;
+
+    const urlObj = urlUtils.urlToObject(browserURL)?.query;
+
+    if (
+      urlObj?.featurelayerURL == undefined ||
+      urlObj?.featurelayerURL == null
+    ) {
+      urlElement.value = sampleURL;
+    } else {
+      urlElement.value = urlObj?.featurelayerURL;
+    }
+
+    //once feature layer url has been set, now add it to the map.
+    addFeatureLayer();
+
+    // Field check
+    if (urlObj?.field != undefined || urlObj?.field != null) {
+      overRidingField = urlObj?.field;
+    }
+
+    if (urlObj?.length == undefined || urlObj?.length == null) {
+      animationTimeElement.value = 10;
+    } else {
+      animationTimeElement.value = urlObj?.length;
+    }
+
+    let extentValid = true;
+
+    if (urlObj?.xmax == undefined || urlObj?.xmax == null) {
+      definedExtent = false;
+    }
+
+    if (urlObj?.xmin == undefined || urlObj?.xmin == null) {
+      definedExtent = false;
+    }
+
+    if (urlObj?.ymax == undefined || urlObj?.ymax == null) {
+      definedExtent = false;
+    }
+
+    if (urlObj?.ymin == undefined || urlObj?.ymin == null) {
+      definedExtent = false;
+    }
+
+    if (extentValid) {
+      const definedExtent = new Extent({
+        spatialReference: {
+          wkid: 102100,
+        },
+        xmax: Number(urlObj?.xmax),
+        xmin: Number(urlObj?.xmin),
+        ymax: Number(urlObj?.ymax),
+        ymin: Number(urlObj?.ymin),
+      });
+
+      updateExtent(definedExtent);
+    }
+
     reactiveUtils.when(
       () => view.stationary === true,
       () => updateMapCoords()
     );
-
-    const point = {
-      type: "point",
-      longitude: xyz[0],
-      latitude: xyz[1],
-    };
-
-    view.goTo({
-      target: point,
-      zoom: xyz[2],
-    });
   });
 
-  //once feature layer url has been set, now add it to the map.
-  addFeatureLayer();
-
-  //if there's no paramaters, then add these in as a default.
-  function defaultService() {
-    urlElement.value = sampleURL;
-    animationTimeElement.value = 10;
-  }
-
   //this generates a new, sharable url link.
-  function updateBrowserURL() {
-    history.pushState(
-      {
-        id: "homepage",
-      },
-      "Home",
-      "?" +
-        urlElement.value +
-        "," +
-        document.getElementById("selection").value +
-        "," +
-        animationTimeElement.value +
-        "," +
-        xyz
-    );
+  function updateBrowserURL(extent) {
+    let url = new URL(window.location.href);
+
+    // featurelayer url
+    let params = new URLSearchParams(url.search);
+
+    params.set("featurelayerURL", urlElement.value);
+    params.set("field", selectionElement.value);
+    params.set("length", animationTimeElement.value);
+    params.set("xmin", [extent.xmin]);
+    params.set("xmax", [extent.xmax]);
+    params.set("ymin", [extent.ymin]);
+    params.set("ymax", [extent.ymax]);
+
+    url.search = params;
+
+    // Update the browser's URL without reloading the page
+    history.replaceState(null, "", url);
   }
 
   //when map moves, update url.
   function updateMapCoords() {
-    xyz = [view.center.longitude, view.center.latitude, view.zoom];
-    updateBrowserURL();
+    updateBrowserURL(view.extent);
   }
 
   //adds the feature layer to the map.
@@ -134,6 +172,11 @@ require([
       getFields(flURL);
 
       urlElement.style.borderBottomColor = "green";
+
+      animatedFeatureLayer.when(() => {
+        play();
+        updateBrowserURL(view.extent);
+      });
     } else {
       map.remove(animatedFeatureLayer);
       urlElement.style.borderBottomColor = "red";
@@ -147,37 +190,27 @@ require([
     }).then((response) => {
       const fieldsObj = response.data;
       document.getElementById("feature-layer-name").innerHTML = fieldsObj.name;
-      updateExtent(fieldsObj.extent);
-      select = document.getElementById("selection");
-      select.innerHTML = "";
+      selectionElement.innerHTML = "";
 
       geometryType = fieldsObj.geometryType;
-      symbolSwitcher(geometryType);
-
+      newSymbol = symbols.getSymbolByGeometry(geometryType);
       for (let i = 0; i < fieldsObj.fields.length; i++) {
-        if (fieldsObj.fields[i].sqlType != "sqlTypeNletchar") {
+        if (
+          fieldsObj.fields[i].type == "esriFieldTypeSingle" ||
+          fieldsObj.fields[i].type == "esriFieldTypeSmallInteger" ||
+          fieldsObj.fields[i].type == "esriFieldTypeInteger" ||
+          fieldsObj.fields[i].type == "esriFieldTypeOID" ||
+          fieldsObj.fields[i].type == "esriFieldTypeDouble"
+        ) {
           let opt = document.createElement("option");
           opt.value = fieldsObj.fields[i].name;
           opt.innerHTML = fieldsObj.fields[i].name;
 
-          if (i === 0 && updateField === true) {
-            opt.value = overRidingField;
-            opt.innerHTML = overRidingField;
-          }
-
-          if (
-            updateField === true &&
-            fieldsObj.fields[i].name === overRidingField
-          ) {
-            opt.value = fieldsObj.fields[0].name;
-            opt.innerHTML = fieldsObj.fields[0].name;
-            updateField = false;
-          }
-
-          select.appendChild(opt);
+          selectionElement.appendChild(opt);
         }
       }
-      updateBrowserURL();
+
+      selectionElement.value = overRidingField;
     });
   }
 
@@ -185,6 +218,7 @@ require([
     if (newExtent.spatialReference.wkid === 102100) {
       view.extent = newExtent;
     }
+
     if (newExtent.spatialReference.wkid != 102100) {
       view.extent = {
         xmax: 20026375.71466102,
@@ -201,7 +235,7 @@ require([
 
     //There's an unknown issue caused by 'ObjectID'
     //This is currently a workaround for it.
-    if (document.getElementById("selection").value === "OBJECTID") {
+    if (selectionElement.value === "OBJECTID") {
       if (urlElement.value != "") {
         animatedFeatureLayer = new FeatureLayer({
           url: urlElement.value,
@@ -212,15 +246,13 @@ require([
       }
     }
 
-    //update with changed values.
-    updateBrowserURL();
-
     //queries the current feature layer url and field to work out start and end frame.
     getMaxMin();
+    restarting = false;
   }
 
   function getMaxMin() {
-    const field = document.getElementById("selection").value;
+    const field = selectionElement.value;
 
     // query for the sum of the population in all features
     const minQuery = {
@@ -261,24 +293,30 @@ require([
 
   function stopAnimation() {
     startNumber(null);
-    stepNumber = null;
-    fieldToAnimate = null;
-    startNo = null;
-    endNo = null;
+    stepNumber = 0;
+    startNo = 0;
+    endNo = 0;
     restarting = true;
   }
 
   function startNumber(value) {
-    animatedFeatureLayer.renderer = createRenderer(value);
+    animatedFeatureLayer.renderer = symbols.getRenderer(
+      newSymbol,
+      fieldToAnimate,
+      value,
+      stepNumber
+    );
   }
 
   function animate(startValue) {
+    let intervalFunc; //animation interval name
     let currentFrame = startValue;
 
-    let frame = function () {
+    function frame() {
       if (restarting) {
         clearTimeout(intervalFunc);
         restarting = false;
+        return;
       }
 
       currentFrame += stepNumber;
@@ -292,86 +330,23 @@ require([
       //animation loop.
       intervalFunc = setTimeout(function () {
         //stops it from overloading.
-        requestAnimationFrame(frame);
+        requestAnimationFrame(function () {
+          frame();
+        });
       }, setIntervalSpeed);
-    };
+    }
 
     //recusrive function, starting the animation.
     frame();
-
-    return {
-      remove: function () {
-        animating = false;
-      },
-    };
   }
 
-  //CHANGE SYMBOLOGY TYPE HERE. (Point, Line or Polygon style)
-  function symbolSwitcher(geometryType) {
-    //Depending on the feature layer currently added, the symbology will change here.
-    //Supporting points, lines and polygons.
-    if (geometryType === "esriGeometryPoint") {
-      newSymbol = {
-        type: "picture-marker",
-        url: "images/PointIconImages/2.png",
-        width: 20,
-        height: 20,
-      };
-    }
+  function updateDropdown() {
+    updateBrowserURL(view.extent);
+    stopAnimation();
 
-    if (geometryType === "esriGeometryPolyline") {
-      newSymbol = {
-        type: "simple-line",
-        width: 3,
-        color: "rgb(55, 55, 255)",
-        opacity: 1,
-      };
-    }
-
-    if (geometryType === "esriGeometryPolygon") {
-      newSymbol = {
-        type: "simple-fill",
-        color: "rgb(55, 55, 255)",
-      };
-    }
-
-    newType = "simple";
-  }
-
-  function createRenderer(now) {
-    return {
-      type: newType,
-      symbol: newSymbol,
-      visualVariables: [
-        {
-          type: "opacity",
-          field: fieldToAnimate,
-          //stops control the fade out
-          stops: [
-            {
-              value: now - stepNumber * 40,
-              opacity: 0.0,
-              //Change this to 0.1 if you always want it on screen during animation
-            },
-            {
-              value: now - stepNumber * 20,
-              opacity: 0.3,
-            },
-            {
-              value: now - stepNumber * 1,
-              opacity: 1,
-            },
-            {
-              value: now,
-              opacity: 1,
-            },
-            {
-              value: now + stepNumber * 2,
-              opacity: 0,
-            },
-          ],
-        },
-      ],
-    };
+    // Adding delay
+    setTimeout(() => {
+      play();
+    }, 100);
   }
 });
