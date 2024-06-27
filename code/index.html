@@ -3,29 +3,28 @@
     <meta charset="utf-8">
     <link rel="stylesheet" href="//js.arcgis.com/4.29/esri/css/main.css">
     <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" type="text/css" href="https://js.arcgis.com/calcite-components/2.9.0/calcite.css" />
+
     <script src="//js.arcgis.com/4.29/"></script>
     <script src="js/main.js"></script>
+    <script type="module" src="https://js.arcgis.com/calcite-components/2.9.0/calcite.esm.js"></script>
  </head>
  <body>
     <div id="viewDiv"></div>
-    <div id="configFs">
-       <p>Enter feature layer URL</p>
+      <div id="ui-container">
+         <p>Enter Feature Layer URL</p>
+         <calcite-input id="fs-url" placeholder="Search location" type="text"></calcite-input>
+         <div id="feature-layer-name">...</div>
 
-       <input type="text" id="fs-url" value=""  placeholder="Enter value here" />
-       <div id="feature-layer-name">...</div>
-       
-       <p>Select attribute to animate</p>
-       
-       <p>
-          <select id="selection">
-             <option></option>
-          </select>
-          for 
-          <input type="text" id="animation-time" value="" /> seconds
-       </p>
+         <p>Select Field to Animate</p>
 
-       <div id="footer">
-          <div id="github"><a href="//github.com/maplabs/pulse" target="_blank"><img src="images/githubLogo.svg" alt="github icon"></a></div>
-       </div>
-    </div>
+         <calcite-label>
+            <calcite-select id="selection"></calcite-select>
+         </calcite-label>
+
+         <p>Time in Seconds</p>
+         <calcite-input id="animation-time" placeholder="10 Seconds" type="text"></calcite-input>
+      
+         <div id="github"><a href="//github.com/maplabs/pulse" target="_blank"><img width="32" src="images/githubLogo.svg" alt="github icon"></a></div>
+      </div>
  </body>

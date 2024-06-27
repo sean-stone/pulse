@@ -55,7 +55,7 @@ require([
   // Event listeners
   urlElement.addEventListener("blur", addFeatureLayer);
   urlElement.addEventListener("change", addFeatureLayer);
-  selectionElement.addEventListener("change", updateDropdown);
+  selectionElement.addEventListener("calciteSelectChange", updateDropdown);
 
   animationTimeElement.addEventListener("blur", updateDropdown);
 
@@ -202,10 +202,16 @@ require([
           fieldsObj.fields[i].type == "esriFieldTypeOID" ||
           fieldsObj.fields[i].type == "esriFieldTypeDouble"
         ) {
-          let opt = document.createElement("option");
-          opt.value = fieldsObj.fields[i].name;
-          opt.innerHTML = fieldsObj.fields[i].name;
+          // let opt = document.createElement("option");
+          // opt.value = fieldsObj.fields[i].name;
+          // opt.innerHTML = fieldsObj.fields[i].name;
 
+          // selectionElement.appendChild(opt);
+          console.log(fieldsObj.fields[i].name)
+
+          var opt = document.createElement("calcite-option");
+          opt.value = fieldsObj.fields[i].name;
+          opt.textContent = fieldsObj.fields[i].name;
           selectionElement.appendChild(opt);
         }
       }
@@ -341,6 +347,7 @@ require([
   }
 
   function updateDropdown() {
+    console.log("has triggered?")
     updateBrowserURL(view.extent);
     stopAnimation();
 
