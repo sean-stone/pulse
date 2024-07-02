@@ -6,6 +6,8 @@ require([
   "esri/request",
   "esri/core/urlUtils",
   "esri/geometry/Extent",
+  "esri/widgets/Expand",
+  "esri/widgets/BasemapGallery",
 
   //   Custom modules
   "./js/symbols.js",
@@ -17,6 +19,8 @@ require([
   esriRequest,
   urlUtils,
   Extent,
+  Expand,
+  BasemapGallery,
 
   symbols
 ) {
@@ -34,11 +38,9 @@ require([
   let geometryType;
   let newSymbol;
   let animatedFeatureLayer;
-
-  // DOM Elementsf
-  const urlElement = document.getElementById("fs-url");
-  const animationTimeElement = document.getElementById("animation-time");
-  const selectionElement = document.getElementById("selection");
+  let urlElement;
+  let selectionElement;
+  let animationTimeElement;
 
   // Create map
   let map = new Map({
@@ -52,12 +54,22 @@ require([
     center: [0, 0],
   });
 
-  // Event listeners
-  urlElement.addEventListener("blur", addFeatureLayer);
-  urlElement.addEventListener("change", addFeatureLayer);
-  selectionElement.addEventListener("calciteSelectChange", updateDropdown);
+  const HTMLElement = createHTMLElements();
 
-  animationTimeElement.addEventListener("blur", updateDropdown);
+  const bgExpand = new Expand({
+    view: view,
+    content: HTMLElement,
+    expanded: true,
+  });
+
+  view.ui.add(bgExpand, "top-right");
+
+  // Create a BasemapGallery widget instance and set
+  // its container to a div element
+
+  // view.ui.add(basemapGalleryExpand, "top-right");
+
+  setupListeners();
 
   view.when(function () {
     // Check URL for paramaters, if there's some. Add it in.
@@ -168,13 +180,16 @@ require([
       animatedFeatureLayer.maxScale = 0;
       animatedFeatureLayer.minScale = 100000000000;
 
-      //rest call to get attribute minimum and maximum values.
+      // rest call to get attribute minimum and maximum values.
       getFields(flURL);
 
       urlElement.style.borderBottomColor = "green";
 
       animatedFeatureLayer.when(() => {
-        play();
+        stopAnimation();
+        setTimeout(() => {
+          play();
+        }, 300);
         updateBrowserURL(view.extent);
       });
     } else {
@@ -202,14 +217,7 @@ require([
           fieldsObj.fields[i].type == "esriFieldTypeOID" ||
           fieldsObj.fields[i].type == "esriFieldTypeDouble"
         ) {
-          // let opt = document.createElement("option");
-          // opt.value = fieldsObj.fields[i].name;
-          // opt.innerHTML = fieldsObj.fields[i].name;
-
-          // selectionElement.appendChild(opt);
-          console.log(fieldsObj.fields[i].name)
-
-          var opt = document.createElement("calcite-option");
+          let opt = document.createElement("calcite-option");
           opt.value = fieldsObj.fields[i].name;
           opt.textContent = fieldsObj.fields[i].name;
           selectionElement.appendChild(opt);
@@ -347,7 +355,6 @@ require([
   }
 
   function updateDropdown() {
-    console.log("has triggered?")
     updateBrowserURL(view.extent);
     stopAnimation();
 
@@ -355,5 +362,108 @@ require([
     setTimeout(() => {
       play();
     }, 100);
+  }
+
+  function createHTMLElements() {
+    // Create the UI container div
+    const uiContainer = document.createElement("div");
+    uiContainer.id = "ui-container";
+    document.body.appendChild(uiContainer);
+
+    // Create calcite-block-section element
+    const featureLayerSection = document.createElement("calcite-block-section");
+    featureLayerSection.setAttribute("open", "");
+    featureLayerSection.setAttribute("text", "Animation Settings");
+    featureLayerSection.setAttribute("toggle-display", "button");
+    featureLayerSection.setAttribute("icon-start", "annotate-tool");
+
+    // Create and append the div for GitHub link
+    const githubDiv = document.createElement("div");
+    githubDiv.id = "github";
+    featureLayerSection.appendChild(githubDiv);
+
+    // Create and append the anchor link with image inside the GitHub div
+    const githubLink = document.createElement("a");
+    githubLink.href = "//github.com/maplabs/pulse";
+    githubLink.target = "_blank";
+    githubDiv.appendChild(githubLink);
+
+    // Create and append the image inside the anchor link
+    const githubImage = document.createElement("img");
+    githubImage.width = 32;
+    githubImage.src = "images/githubLogo.svg";
+    githubImage.alt = "github icon";
+    githubLink.appendChild(githubImage);
+
+    // Create and append the paragraph for Feature Layer URL
+    const p1 = document.createElement("p");
+    p1.textContent = "Enter Feature Layer URL";
+    featureLayerSection.appendChild(p1);
+
+    // Create and append the input for Feature Layer URL
+    urlElement = document.createElement("calcite-input");
+    urlElement.id = "fs-url";
+    urlElement.placeholder = "Search location";
+    urlElement.type = "text";
+    featureLayerSection.appendChild(urlElement);
+
+    // Create and append the div for feature layer name
+    const featureLayerName = document.createElement("div");
+    featureLayerName.id = "feature-layer-name";
+    featureLayerName.textContent = "...";
+    featureLayerSection.appendChild(featureLayerName);
+
+    // Create and append the paragraph for selecting field to animate
+    const p2 = document.createElement("p");
+    p2.textContent = "Select Field to Animate";
+    featureLayerSection.appendChild(p2);
+
+    // Create and append the label for selection
+    const calciteLabel = document.createElement("calcite-label");
+    featureLayerSection.appendChild(calciteLabel);
+
+    // Create and append the select element inside the label
+    selectionElement = document.createElement("calcite-select");
+    selectionElement.id = "selection";
+    calciteLabel.appendChild(selectionElement);
+
+    // Create and append the paragraph for time in seconds
+    const p3 = document.createElement("p");
+    p3.textContent = "Time in Seconds";
+    featureLayerSection.appendChild(p3);
+
+    // Create and append the input for animation time
+    animationTimeElement = document.createElement("calcite-input");
+    animationTimeElement.id = "animation-time";
+    animationTimeElement.placeholder = "10 Seconds";
+    animationTimeElement.type = "text";
+    featureLayerSection.appendChild(animationTimeElement);
+
+    uiContainer.appendChild(featureLayerSection);
+
+    // Create calcite-block-section element
+    const calciteBlockSection = document.createElement("calcite-block-section");
+    calciteBlockSection.setAttribute("open", "");
+    calciteBlockSection.setAttribute("text", "Change Basemap");
+    calciteBlockSection.setAttribute("toggle-display", "button");
+    calciteBlockSection.setAttribute("icon-start", "apps");
+
+    const basemapSection = document.createElement("div");
+    calciteBlockSection.appendChild(basemapSection);
+
+    uiContainer.appendChild(calciteBlockSection);
+
+    const basemapGallery = new BasemapGallery({
+      view: view,
+      container: basemapSection,
+    });
+
+    return uiContainer;
+  }
+
+  function setupListeners() {
+    urlElement.addEventListener("blur", addFeatureLayer);
+    selectionElement.addEventListener("calciteSelectChange", updateDropdown);
+    animationTimeElement.addEventListener("blur", updateDropdown);
   }
 });
