@@ -59,8 +59,17 @@ require([
   const bgExpand = new Expand({
     view: view,
     content: HTMLElement,
-    expanded: true,
   });
+
+  reactiveUtils.watch(
+    () => {
+      const mobileSize = view.heightBreakpoint === "xsmall" || view.widthBreakpoint === "xsmall";
+
+      if (mobileSize) {
+        bgExpand.collapse();
+      }
+    }
+  );
 
   view.ui.add(bgExpand, "top-right");
 
@@ -368,19 +377,16 @@ require([
     // Create the UI container div
     const uiContainer = document.createElement("div");
     uiContainer.id = "ui-container";
-    document.body.appendChild(uiContainer);
 
-    // Create calcite-block-section element
-    const featureLayerSection = document.createElement("calcite-block-section");
-    featureLayerSection.setAttribute("open", "");
-    featureLayerSection.setAttribute("text", "Animation Settings");
-    featureLayerSection.setAttribute("toggle-display", "button");
-    featureLayerSection.setAttribute("icon-start", "annotate-tool");
+    const header = document.createElement("calcite-block");
+    header.setAttribute("heading", "Pulse");
+    header.setAttribute("description", "Animate your FeatureLayers by field!");
+    uiContainer.appendChild(header);
 
     // Create and append the div for GitHub link
     const githubDiv = document.createElement("div");
     githubDiv.id = "github";
-    featureLayerSection.appendChild(githubDiv);
+    uiContainer.appendChild(githubDiv);
 
     // Create and append the anchor link with image inside the GitHub div
     const githubLink = document.createElement("a");
@@ -394,6 +400,13 @@ require([
     githubImage.src = "images/githubLogo.svg";
     githubImage.alt = "github icon";
     githubLink.appendChild(githubImage);
+
+    // Create calcite-block-section element
+    const featureLayerSection = document.createElement("calcite-block-section");
+    featureLayerSection.setAttribute("open", "");
+    featureLayerSection.setAttribute("text", "Animation Settings");
+    featureLayerSection.setAttribute("toggle-display", "button");
+    featureLayerSection.setAttribute("icon-start", "annotate-tool");
 
     // Create and append the paragraph for Feature Layer URL
     const p1 = document.createElement("p");
@@ -443,7 +456,7 @@ require([
 
     // Create calcite-block-section element
     const calciteBlockSection = document.createElement("calcite-block-section");
-    calciteBlockSection.setAttribute("open", "");
+    calciteBlockSection.setAttribute("open", "false");
     calciteBlockSection.setAttribute("text", "Change Basemap");
     calciteBlockSection.setAttribute("toggle-display", "button");
     calciteBlockSection.setAttribute("icon-start", "apps");

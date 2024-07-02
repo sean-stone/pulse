@@ -48,6 +48,9 @@ body{
 
 #github {
   float: right;
+  top: 10px;
+  right: 10px;
+  position: absolute;
 }
 
 #viewDiv {
@@ -57,12 +60,9 @@ body{
 
 #ui-container {
   top: 10px;
-  right: 10px;
   z-index: 10;
   background-color: white;
   padding: 20px;
-  padding-top: 0px;
-  border-radius: 8px;
   width: 300px;
 }
 
@@ -73,11 +73,14 @@ body{
 @media only screen and (max-width: 540px) {
   #ui-container {
       width: calc(100% - 20px);
-      opacity: 1;
-      left: 0;
-      bottom: 18px;
       padding: 10px;
-      border-radius: 0;
-      height: 90vh;
+  }
+
+  #github {
+    display: inline-block;
+    position: absolute;
+    height: 60px;
+    width: 10px;
+    padding: 54px;
   }
 }
