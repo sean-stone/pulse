@@ -1,4 +1,4 @@
-body{
+body {
   margin: 0px;
 }
 
@@ -19,7 +19,7 @@ body{
 }
 
 #fs-url {
-  padding:5px;
+  padding: 5px;
   width: 100%;
   background: white;
   border-radius: 5px;
@@ -28,8 +28,8 @@ body{
   border-bottom-width: 4px;
 }
 
-#play{
-  padding:5px;
+#play {
+  padding: 5px;
   width: 15%;
   background: white;
   border-radius: 5px;
@@ -48,7 +48,7 @@ body{
 
 #github {
   float: right;
-  top: 10px;
+  top: 2px;
   right: 10px;
   position: absolute;
 }
@@ -59,11 +59,16 @@ body{
 }
 
 #ui-container {
-  top: 10px;
-  z-index: 10;
-  background-color: white;
   padding: 20px;
   width: 300px;
+  overflow-y: scroll;
+  max-height: 88vh;
+}
+
+.symbol-input {
+  width: calc(100% - 8px);
+  padding: 4px;
+  margin-bottom: 16px;
 }
 
 .esri-view-width-greater-than-large .esri-ui-corner .esri-basemap-gallery {
@@ -72,8 +77,8 @@ body{
 
 @media only screen and (max-width: 540px) {
   #ui-container {
-      width: calc(100% - 20px);
-      padding: 10px;
+    width: calc(100% - 20px);
+    padding: 10px;
   }
 
   #github {
