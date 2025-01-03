@@ -1,9 +1,9 @@
 define([], function () {
   return {
     "refresh-speed-ms": 16.6,
-    "featurelayer-url": "https://services.arcgis.com/Lq3V5RFuTBC9I7kv/ArcGIS/rest/services/Winter_Minimum_Temperature_Change___Projections_12km_grid/FeatureServer/337",
-    "field": "tasmin_winter_change_20_median",
-    "duration": 10,
+    "featurelayer-url": "https://services9.arcgis.com/RHVPKKiFTONKtxq3/arcgis/rest/services/NOAA_METAR_current_wind_speed_direction_v1/FeatureServer/0",
+    "field": "TEMP",
+    "duration": 3,
     "basemap": "dark-gray-vector",
     "blendMode": "normal",
     "map": {
@@ -13,6 +13,7 @@ define([], function () {
         "ymin": 6264043.103107279,
         "ymax": 7725519.08391946
       }
-    }
+    },
+    "animateBy": "opacity"
   };
 });

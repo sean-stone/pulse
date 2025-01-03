@@ -1,13 +1,13 @@
 <head>
   <meta name="viewport" content="width=device-width, minimum-scale=1.0, initial-scale=1, user-scalable=no" />
   <meta charset="utf-8" />
-  <link rel="stylesheet" href="//js.arcgis.com/4.30/esri/css/main.css" />
+  <link rel="stylesheet" href="//js.arcgis.com/4.31/esri/css/main.css" />
   <link rel="stylesheet" href="css/style.css" />
-  <link rel="stylesheet" type="text/css" href="https://js.arcgis.com/calcite-components/2.9.0/calcite.css" />
+  <link rel="stylesheet" type="text/css" href="https://js.arcgis.com/calcite-components/2.13.2/calcite.css" />
 
-  <script src="//js.arcgis.com/4.30/"></script>
+  <script src="//js.arcgis.com/4.31/"></script>
   <script src="js/main.js"></script>
-  <script type="module" src="https://js.arcgis.com/calcite-components/2.9.0/calcite.esm.js"></script>
+  <script type="module" src="https://js.arcgis.com/calcite-components/2.13.2/calcite.esm.js"></script>
 </head>
 
 <body>
@@ -39,6 +39,18 @@
       </calcite-label>
     </calcite-block-section>
 
+    <!-- Animate by Section -->
+    <calcite-block-section open="false" text="Animate by" toggle-display="button" icon-start="star">
+      <p>Select animate type</p>
+      <calcite-label>
+        <calcite-select id="animate-option">
+          <calcite-option value="opacity">opacity</calcite-option>
+          <calcite-option value="size">size</calcite-option>
+        </calcite-select>
+      </calcite-label>
+      <p>Note: Size is not available against polygon features.</p>
+    </calcite-block-section>
+
     <!-- Basemap Section -->
     <calcite-block-section open="false" text="Change Basemap" toggle-display="button" icon-start="apps">
       <div id="basemap-gallery"></div>
@@ -59,7 +71,7 @@
           </calcite-select>
         </calcite-label>
         <calcite-label>color
-          <calcite-input placeholder="Placeholder" type="color" scale="s" id="point-color-input">
+          <calcite-input placeholder="Placeholder" value="#FFFFFF" type="color" scale="s" id="point-color-input">
           </calcite-input>
         </calcite-label>
         <calcite-label>outline
@@ -125,7 +137,7 @@
           <calcite-input min="0" value="1" type="number" scale="s" id="line-width-input"></calcite-input>
         </calcite-label>
         <calcite-label>color
-          <calcite-input placeholder="Placeholder" type="color" scale="s" id="line-color-input" format="rgb">
+          <calcite-input placeholder="Placeholder" type="color" value="#FFFFFF" scale="s" id="line-color-input" format="rgb">
           </calcite-input>
         </calcite-label>
       </div>
@@ -166,7 +178,7 @@
       <h3 slot="header">SimpleLineSymbol</h3>
       <div slot="content">
         <calcite-label>width
-          <calcite-input min="0" width="1" type="number" scale="s" id="point-sls-width-input">
+          <calcite-input min="0" value="0" width="1" type="number" scale="s" id="point-sls-width-input">
           </calcite-input>
         </calcite-label>
         <calcite-label>color

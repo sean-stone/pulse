@@ -12,7 +12,8 @@ define(["./js/defaultOptions.js"], function (defaultOptions) {
       ymax,
       basemap,
       symbol,
-      blendMode
+      blendMode,
+      animateBy
     ) {
       this.featureLayerUrl = featureLayerUrl; // URL of the feature layer
       this.animationField = animationField; // Field used for animation
@@ -24,6 +25,11 @@ define(["./js/defaultOptions.js"], function (defaultOptions) {
       this.basemap = basemap; // Type of basemap (e.g., "streets", "satellite")
       this.symbol = symbol; // Symbol information (e.g., marker style)
       this.blendMode = blendMode; // Blend mode (e.g., "multiply", "overlay")
+      this.animateBy = animateBy;
+    }
+
+    changeAnimateBy(value){
+      this.animateBy = value;
     }
 
     // Method to update the bounding box
@@ -76,7 +82,8 @@ define(["./js/defaultOptions.js"], function (defaultOptions) {
     defaultOptions.map.extent.ymax,
     defaultOptions.basemap,
     defaultOptions.symbol,
-    defaultOptions.blendMode
+    defaultOptions.blendMode,
+    defaultOptions.animateBy
   );
 
   function setUrlParams() {
@@ -165,6 +172,16 @@ define(["./js/defaultOptions.js"], function (defaultOptions) {
       } else {
         mapConfig.changeBlendMode(urlObj?.blendMode);
       }
+
+      if(urlObj?.animateBy){
+        mapConfig.changeAnimateBy(urlObj?.animateBy)
+      } else {
+        mapConfig.changeBlendMode(defaultOptions.animateBy)
+      }
+    },
+    updateAnimateBy: function(value){
+      mapConfig.changeAnimateBy(value);
+      setUrlParams();
     },
     changeFL: function (url) {
       mapConfig.changeFL(url);

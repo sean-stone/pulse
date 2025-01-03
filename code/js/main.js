@@ -124,12 +124,15 @@ require([
 
     const mapConfigObj = urlHandler.getMapConfig();
     document.getElementById("fs-url").value = mapConfigObj.featureLayerUrl;
+
+    if (mapConfigObj.animateBy) {
+      document.getElementById("animate-option").value = mapConfigObj.animateBy;
+    }
+
     map.basemap = mapConfigObj.basemap;
 
     if (mapConfigObj.symbol != undefined && mapConfigObj.symbol != "undefined") {
-      // set event based on symbol?
       newSymbol = SimpleFillSymbol.fromJSON(JSON.parse(mapConfigObj.symbol));
-      console.log(newSymbol)
       document.getElementById("polygon-style-select").value = newSymbol.style;
       document.getElementById("polygon-color-input").value = Object.values(newSymbol.color);
       document.getElementById("polygon-sls-style-select").value = newSymbol.outline.type;
@@ -305,14 +308,34 @@ require([
     switch (geometryType) {
       case "esriGeometryPoint":
         document.getElementById("point-section").style.display = "block";
-
+        updatePointSymbol(
+          document.getElementById("point-style-select").value,
+          document.getElementById("point-color-input").value,
+          document.getElementById("point-size-input").value,
+          document.getElementById("point-sls-width-input").value,
+          document.getElementById("point-sls-color-input").value,
+          document.getElementById("point-angle-input").value,
+          document.getElementById("point-xoffset-input").value,
+          document.getElementById("point-yoffset-input").value
+        );
         break;
       case "esriGeometryPolyline":
         document.getElementById("polyline-section").style.display = "block";
-
+        updatePolylineSymbol(
+          document.getElementById("line-style-select").value,
+          document.getElementById("line-width-input").value,
+          document.getElementById("line-color-input").value
+        );
         break;
       case "esriGeometryPolygon":
         document.getElementById("polygon-section").style.display = "block";
+        updatePolygonSymbol(
+          document.getElementById("polygon-style-select").value,
+          document.getElementById("polygon-color-input").value,
+          document.getElementById("polygon-sls-style-select").value,
+          document.getElementById("polygon-sls-width-input").value,
+          document.getElementById("polygon-sls-color-input").value
+        );
         break;
 
       default:
@@ -341,17 +364,6 @@ require([
   function play() {
     //Stops any previously added animations in the frame
     stopAnimation();
-
-    if (document.getElementById("selection").value === "OBJECTID") {
-      if (document.getElementById("fs-url").value != "") {
-        animatedFeatureLayer = new FeatureLayer({
-          url: document.getElementById("fs-url").value,
-        });
-
-        map.removeAll();
-        map.add(animatedFeatureLayer);
-      }
-    }
 
     //queries the current feature layer url and field to work out start and end frame.
     getMaxMin();
@@ -416,7 +428,8 @@ require([
       newSymbol,
       fieldToAnimate,
       value,
-      stepNumber
+      stepNumber,
+      document.getElementById("animate-option").value
     );
   }
 
@@ -473,6 +486,10 @@ require([
     document.getElementById("polygon-outline-btn").onclick = () => {
       openModal("polygon-outline-modal");
     };
+
+    document.getElementById("animate-option").addEventListener("calciteSelectChange", function (e) {
+      urlHandler.updateAnimateBy(e.target.value);
+    });
 
     document.getElementById("selection").addEventListener("calciteSelectChange", function (e) {
       urlHandler.updateField(e.target.value);

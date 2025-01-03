@@ -40,40 +40,68 @@ define([], function () {
       }
     },
 
-    updateSymbolByGeometry: function (geometryType, symbol) {
+    updateSymbolByGeometry: function (symbol) {
       defaultSymbols.point = symbol;
     },
 
-    getRenderer: function (newSymbol, fieldToAnimate, value, stepNumber) {
+    getRenderer: function (newSymbol, fieldToAnimate, value, stepNumber, animationType) {
+      if (animationType === "opacity") {
+        return {
+          type: "simple",
+          symbol: newSymbol,
+          visualVariables: [
+            {
+              type: "opacity",
+              field: fieldToAnimate,
+              //stops control the fade out
+              stops: [
+                {
+                  value: value - stepNumber * 40,
+                  opacity: 0.0,
+                  //Change this to 0.1 if you always want it on screen during animation
+                },
+                {
+                  value: value - stepNumber * 20,
+                  opacity: 0.3,
+                },
+                {
+                  value: value,
+                  opacity: 1,
+                },
+                {
+                  value: value + stepNumber * 2,
+                  opacity: 0,
+                },
+              ],
+            },
+          ],
+        };
+      }
       return {
         type: "simple",
         symbol: newSymbol,
         visualVariables: [
           {
-            type: "opacity",
+            type: animationType,
             field: fieldToAnimate,
             //stops control the fade out
             stops: [
               {
                 value: value - stepNumber * 40,
-                opacity: 0.0,
+                size: 0.0,
                 //Change this to 0.1 if you always want it on screen during animation
               },
               {
                 value: value - stepNumber * 20,
-                opacity: 0.3,
-              },
-              {
-                value: value - stepNumber * 1,
-                opacity: 1,
+                size: 0.3,
               },
               {
                 value: value,
-                opacity: 1,
+                size: newSymbol.size ? newSymbol.size : newSymbol.width,
               },
               {
                 value: value + stepNumber * 2,
-                opacity: 0,
+                size: 0,
               },
             ],
           },
