@@ -8,8 +8,13 @@ require([
   "esri/geometry/Extent",
   "esri/widgets/Expand",
   "esri/widgets/BasemapGallery",
+  "esri/symbols/SimpleMarkerSymbol",
+  "esri/symbols/SimpleFillSymbol",
+  "esri/symbols/SimpleLineSymbol",
 
   //   Custom modules
+  "./js/defaultOptions.js",
+  "./js/urlHandler.js",
   "./js/symbols.js",
 ], function (
   Map,
@@ -21,12 +26,15 @@ require([
   Extent,
   Expand,
   BasemapGallery,
+  SimpleMarkerSymbol,
+  SimpleFillSymbol,
+  SimpleLineSymbol,
 
+  defaultOptions,
+  urlHandler,
   symbols
 ) {
-  const setIntervalSpeed = 16.6; //refresh speed in ms
-  const sampleURL =
-    "https://services9.arcgis.com/RHVPKKiFTONKtxq3/arcgis/rest/services/NOAA_METAR_current_wind_speed_direction_v1/FeatureServer/0";
+  const setIntervalSpeed = defaultOptions["refresh-speed-ms"]; //refresh speed in ms
 
   // Globals
   let endNo; //highest number in the attribute
@@ -35,111 +43,119 @@ require([
   let stepNumber; //increment value
   let restarting = false; //flag to control removing animation
   let overRidingField; //casts url field as no.1 selection in attribute selector
-  let geometryType;
   let newSymbol;
-  let animatedFeatureLayer;
-  let urlElement;
-  let selectionElement;
-  let animationTimeElement;
+  let animatedFeatureLayer = new FeatureLayer();
 
   // Create map
   let map = new Map({
-    basemap: "dark-gray-vector",
+    basemap: defaultOptions["basemap"],
   });
 
   let view = new MapView({
     container: "viewDiv",
     map: map,
-    zoom: 3,
-    center: [0, 0],
+    zoom: defaultOptions["map"]["zoom"],
+    center: defaultOptions["map"]["center"],
   });
-
-  const HTMLElement = createHTMLElements();
 
   const bgExpand = new Expand({
     view: view,
-    content: HTMLElement,
+    content: document.getElementById("ui-container"),
+    expanded: true,
   });
 
-  reactiveUtils.watch(
-    () => {
-      const mobileSize = view.heightBreakpoint === "xsmall" || view.widthBreakpoint === "xsmall";
+  reactiveUtils.watch(() => {
+    const mobileSize =
+      view.heightBreakpoint === "xsmall" || view.widthBreakpoint === "xsmall";
 
-      if (mobileSize) {
-        bgExpand.collapse();
-      }
+    if (mobileSize) {
+      bgExpand.collapse();
     }
-  );
+  });
 
   view.ui.add(bgExpand, "top-right");
 
-  // Create a BasemapGallery widget instance and set
-  // its container to a div element
+  new BasemapGallery({
+    view: view,
+    container: document.getElementById("basemap-gallery"),
+  }).watch("activeBasemap", function (newBasemap) {
+    const basemapObj = {
+      "Streets": "streets",
+      "Imagery": "satellite",
+      "Imagery Hybrid": "hybrid",
+      "Topographic": "topo-vector",
+      "Navigation": "streets-navigation-vector",
+      "Streets (Night)": "streets-night-vector",
+      "Terrain": "terrain",
+      "Gray": "gray-vector",
+      "Dark Gray": "dark-gray-vector",
+      "National Geographic": "national-geographic",
+      "Oceans": "oceans",
+      "Physical": "physical",
+      "OpenStreetMap": "osm",
+      "Imagery (Clarity)": "satellite-clarity",
+      "Community": "community",
+      "Charted Territory": "charted-territory",
+      "Colored Pencil": "colored-pencil",
+      "Newspaper": "newspaper",
+      "Blueprint": "blueprint",
+      "Firefly": "firefly",
+      "Human Geography": "human-geography",
+      "Human Geography Dark": "human-geography-dark",
+      "Terrain with Labels": "terrain",
+      "Imagery Firefly": "imagery-firefly",
+      "Charted Territory Dark": "charted-territory-dark",
+      "Nova": "nova",
+      "Mid-Century": "midcentury",
+    };
+    const basemapTitle = basemapObj?.[newBasemap.title];
+    if (basemapTitle) urlHandler.changeBasemap(basemapTitle);
+  });
 
-  // view.ui.add(basemapGalleryExpand, "top-right");
-
-  setupListeners();
-
+  // When the view is ready
   view.when(function () {
+    setupListeners();
+
     // Check URL for paramaters, if there's some. Add it in.
     let browserURL = window.location.search;
 
     const urlObj = urlUtils.urlToObject(browserURL)?.query;
+    urlHandler.loadingUrlParams(urlObj);
 
-    if (
-      urlObj?.featurelayerURL == undefined ||
-      urlObj?.featurelayerURL == null
-    ) {
-      urlElement.value = sampleURL;
-    } else {
-      urlElement.value = urlObj?.featurelayerURL;
+    const mapConfigObj = urlHandler.getMapConfig();
+    document.getElementById("fs-url").value = mapConfigObj.featureLayerUrl;
+    map.basemap = mapConfigObj.basemap;
+
+    if (mapConfigObj.symbol != undefined && mapConfigObj.symbol != "undefined") {
+      // set event based on symbol?
+      newSymbol = SimpleFillSymbol.fromJSON(JSON.parse(mapConfigObj.symbol));
+      console.log(newSymbol)
+      document.getElementById("polygon-style-select").value = newSymbol.style;
+      document.getElementById("polygon-color-input").value = Object.values(newSymbol.color);
+      document.getElementById("polygon-sls-style-select").value = newSymbol.outline.type;
+      document.getElementById("polygon-sls-width-input").value = newSymbol.outline.width;
+      document.getElementById("polygon-sls-color-input").value = Object.values(newSymbol.outline.color);
     }
 
-    //once feature layer url has been set, now add it to the map.
+    // Once feature layer url has been set, now add it to the map.
     addFeatureLayer();
 
-    // Field check
-    if (urlObj?.field != undefined || urlObj?.field != null) {
-      overRidingField = urlObj?.field;
-    }
+    document.getElementById("animation-time").value = mapConfigObj.animationTime;
+    overRidingField = mapConfigObj.animationField;
+    document.getElementById("blend-mode-selection").value = mapConfigObj.blendMode;
+    animatedFeatureLayer.blendMode = mapConfigObj.blendMode;
 
-    if (urlObj?.length == undefined || urlObj?.length == null) {
-      animationTimeElement.value = 10;
-    } else {
-      animationTimeElement.value = urlObj?.length;
-    }
+    const definedExtent = new Extent({
+      spatialReference: {
+        wkid: 102100,
+      },
+      xmax: Number(mapConfigObj?.xmax),
+      xmin: Number(mapConfigObj?.xmin),
+      ymax: Number(mapConfigObj?.ymax),
+      ymin: Number(mapConfigObj?.ymin),
+    });
 
-    let extentValid = true;
-
-    if (urlObj?.xmax == undefined || urlObj?.xmax == null) {
-      definedExtent = false;
-    }
-
-    if (urlObj?.xmin == undefined || urlObj?.xmin == null) {
-      definedExtent = false;
-    }
-
-    if (urlObj?.ymax == undefined || urlObj?.ymax == null) {
-      definedExtent = false;
-    }
-
-    if (urlObj?.ymin == undefined || urlObj?.ymin == null) {
-      definedExtent = false;
-    }
-
-    if (extentValid) {
-      const definedExtent = new Extent({
-        spatialReference: {
-          wkid: 102100,
-        },
-        xmax: Number(urlObj?.xmax),
-        xmin: Number(urlObj?.xmin),
-        ymax: Number(urlObj?.ymax),
-        ymin: Number(urlObj?.ymin),
-      });
-
-      updateExtent(definedExtent);
-    }
+    updateExtent(definedExtent);
 
     reactiveUtils.when(
       () => view.stationary === true,
@@ -147,96 +163,165 @@ require([
     );
   });
 
-  //this generates a new, sharable url link.
-  function updateBrowserURL(extent) {
-    let url = new URL(window.location.href);
-
-    // featurelayer url
-    let params = new URLSearchParams(url.search);
-
-    params.set("featurelayerURL", urlElement.value);
-    params.set("field", selectionElement.value);
-    params.set("length", animationTimeElement.value);
-    params.set("xmin", [extent.xmin]);
-    params.set("xmax", [extent.xmax]);
-    params.set("ymin", [extent.ymin]);
-    params.set("ymax", [extent.ymax]);
-
-    url.search = params;
-
-    // Update the browser's URL without reloading the page
-    history.replaceState(null, "", url);
+  // Open modal
+  function openModal(id) {
+    document.getElementById(id).open = true;
   }
-
-  //when map moves, update url.
+  // When map moves, update url.
   function updateMapCoords() {
-    updateBrowserURL(view.extent);
+    const viewExtent = view.extent;
+
+    urlHandler.updateBoundingBox(
+      viewExtent.xmin,
+      viewExtent.xmax,
+      viewExtent.ymin,
+      viewExtent.ymax
+    );
   }
 
-  //adds the feature layer to the map.
-  function addFeatureLayer() {
-    let flURL = urlElement.value;
+  function showErrorLoadingFeatureLayer(errorMessage) {
+    document.getElementById("fl-error").innerHTML = errorMessage;
+    document.getElementById("feature-layer-name").innerHTML = ""
+    document.getElementById("fl-error").style.display = "block";
+  }
 
-    if (flURL != "") {
-      animatedFeatureLayer = new FeatureLayer({
-        url: flURL,
-      });
+  function successLoadingFeatureLayer() {
+    document.getElementById("fl-error").innerHTML = "";
+    document.getElementById("fl-error").style.display = "none";
+  }
 
-      map.removeAll();
-      map.add(animatedFeatureLayer);
+  // Function to check if the URL is a valid Feature Layer URL
+  async function isValidFeatureLayerURL(url) {
+    try {
+      // Init clientside query first
+      // Starts with http or https, ends in FeatureServer/{number}
+      const urlPattern = /^https?:\/\/.*\/FeatureServer\/\d+$/;
+      if (urlPattern.test(url) == false) {
+        showErrorLoadingFeatureLayer("This FeatureLayerURL doesnt seem to be valid. Check you've added a layer id (e.g. /0)")
+        return false;
+      }
 
-      //overides ANY scale threshold added to feature layer.
-      animatedFeatureLayer.maxScale = 0;
-      animatedFeatureLayer.minScale = 100000000000;
+      const response = await fetch(url + "?f=json");
 
-      // rest call to get attribute minimum and maximum values.
-      getFields(flURL);
+      // Check if the response is OK (status 200)
+      if (response.ok) {
+        const data = await response.json();
 
-      urlElement.style.borderBottomColor = "green";
-
-      animatedFeatureLayer.when(() => {
-        stopAnimation();
-        setTimeout(() => {
-          play();
-        }, 300);
-        updateBrowserURL(view.extent);
-      });
-    } else {
-      map.remove(animatedFeatureLayer);
-      urlElement.style.borderBottomColor = "red";
+        // Check if the response has the necessary attributes for a Feature Layer
+        if (data && data.type === "Feature Layer") {
+          successLoadingFeatureLayer();
+          return true;
+        } else {
+          showErrorLoadingFeatureLayer("The URL is reachable but does not appear to be a Feature Layer.")
+          return false;
+        }
+      } else {
+        showErrorLoadingFeatureLayer("The URL is not reachable. Response status: " + response.status)
+        return false;
+      }
+    } catch (error) {
+      showErrorLoadingFeatureLayer("There was an error connecting to the URL: " + error)
+      return false;
     }
   }
 
-  //populating selection drop down based on featurelayer.
+  // Adds the feature layer to the map.
+  function addFeatureLayer() {
+    const flURLElement = document.getElementById("fs-url");
+
+    isValidFeatureLayerURL(flURLElement.value).then(
+      function (isValid) {
+        if (isValid == true) {
+          urlHandler.changeFL(flURLElement.value);
+
+          animatedFeatureLayer = new FeatureLayer({
+            url: flURLElement.value,
+          });
+
+          map.removeAll();
+          map.add(animatedFeatureLayer);
+
+          //overides ANY scale threshold added to feature layer.
+          animatedFeatureLayer.maxScale = 0;
+          animatedFeatureLayer.minScale = 100000000000;
+
+          // rest call to get attribute minimum and maximum values.
+          getFields(flURLElement.value);
+
+          animatedFeatureLayer.when(() => {
+            stopAnimation();
+            setTimeout(() => {
+              play();
+            }, 300);
+          });
+        } else {
+          map.remove(animatedFeatureLayer);
+        }
+      }
+    );
+  }
+
+  // Populating selection drop down based on featurelayer.
   function getFields(flURL) {
     esriRequest(flURL + "?f=json", {
       responseType: "json",
     }).then((response) => {
       const fieldsObj = response.data;
       document.getElementById("feature-layer-name").innerHTML = fieldsObj.name;
-      selectionElement.innerHTML = "";
+      document.getElementById("selection").innerHTML = "";
 
-      geometryType = fieldsObj.geometryType;
-      newSymbol = symbols.getSymbolByGeometry(geometryType);
+      const geometryType = fieldsObj.geometryType;
+      showSymbolsBasedOnGeometryType(geometryType);
+
+      if (newSymbol == undefined || newSymbol == "undefined") {
+        newSymbol = symbols.getSymbolByGeometry(geometryType);
+      }
+
       for (let i = 0; i < fieldsObj.fields.length; i++) {
         if (
           fieldsObj.fields[i].type == "esriFieldTypeSingle" ||
           fieldsObj.fields[i].type == "esriFieldTypeSmallInteger" ||
           fieldsObj.fields[i].type == "esriFieldTypeInteger" ||
-          fieldsObj.fields[i].type == "esriFieldTypeOID" ||
           fieldsObj.fields[i].type == "esriFieldTypeDouble"
         ) {
           let opt = document.createElement("calcite-option");
           opt.value = fieldsObj.fields[i].name;
           opt.textContent = fieldsObj.fields[i].name;
-          selectionElement.appendChild(opt);
+          document.getElementById("selection").appendChild(opt);
         }
       }
 
-      selectionElement.value = overRidingField;
+      document.getElementById("selection").value = overRidingField;
     });
   }
 
+  // Hide/Show symbols based on geometry type
+  function showSymbolsBasedOnGeometryType(geometryType) {
+    // Default: hide all sections
+    document.getElementById("polygon-section").style.display = "none";
+    document.getElementById("polyline-section").style.display = "none";
+    document.getElementById("point-section").style.display = "none";
+
+    switch (geometryType) {
+      case "esriGeometryPoint":
+        document.getElementById("point-section").style.display = "block";
+
+        break;
+      case "esriGeometryPolyline":
+        document.getElementById("polyline-section").style.display = "block";
+
+        break;
+      case "esriGeometryPolygon":
+        document.getElementById("polygon-section").style.display = "block";
+        break;
+
+      default:
+        console.warn("Geometry type not supported: " + geometryType);
+        break;
+    }
+  }
+
+  // Go to extent
   function updateExtent(newExtent) {
     if (newExtent.spatialReference.wkid === 102100) {
       view.extent = newExtent;
@@ -252,16 +337,15 @@ require([
     }
   }
 
+  // Play animation
   function play() {
     //Stops any previously added animations in the frame
     stopAnimation();
 
-    //There's an unknown issue caused by 'ObjectID'
-    //This is currently a workaround for it.
-    if (selectionElement.value === "OBJECTID") {
-      if (urlElement.value != "") {
+    if (document.getElementById("selection").value === "OBJECTID") {
+      if (document.getElementById("fs-url").value != "") {
         animatedFeatureLayer = new FeatureLayer({
-          url: urlElement.value,
+          url: document.getElementById("fs-url").value,
         });
 
         map.removeAll();
@@ -274,19 +358,20 @@ require([
     restarting = false;
   }
 
+  // Get min and max values based on field selected
   function getMaxMin() {
-    const field = selectionElement.value;
+    const field = document.getElementById("selection").value;
 
-    // query for the sum of the population in all features
+    // Query for the sum of the population in all features
     const minQuery = {
-      onStatisticField: field, // service field for 2015 population
+      onStatisticField: field,
       outStatisticFieldName: "MinID",
       statisticType: "min",
     };
 
-    // query for the average population in all features
+    // Query for the average population in all features
     const maxQuery = {
-      onStatisticField: field, // service field for 2015 population
+      onStatisticField: field,
       outStatisticFieldName: "MaxID",
       statisticType: "max",
     };
@@ -295,34 +380,38 @@ require([
     query.outStatistics = [minQuery, maxQuery];
     animatedFeatureLayer.queryFeatures(query).then(function (dataJSONObj) {
       fieldToAnimate = field;
-      startNumber(dataJSONObj.features[0].attributes.MinID);
+      updateRenderer(dataJSONObj.features[0].attributes.MinID);
       endNo = dataJSONObj.features[0].attributes.MaxID;
 
-      //generate step number here too
+      // Generate step number here too
       const difference = Math.abs(
         dataJSONObj.features[0].attributes.MinID -
-          dataJSONObj.features[0].attributes.MaxID
+        dataJSONObj.features[0].attributes.MaxID
       );
-      let differencePerSecond = difference / animationTimeElement.value;
+
+      let differencePerSecond =
+        difference / document.getElementById("animation-time").value;
       stepNumber = differencePerSecond / setIntervalSpeed;
       startNo = dataJSONObj.features[0].attributes.MinID;
       animate(dataJSONObj.features[0].attributes.MinID);
 
-      //adding empty frames at the start and end for fade in/out
+      // Adding empty frames at the start and end for fade in/out
       endNo += stepNumber * 40;
       startNo -= stepNumber * 2;
     });
   }
 
+  // Stop animation
   function stopAnimation() {
-    startNumber(null);
+    updateRenderer(null);
     stepNumber = 0;
     startNo = 0;
     endNo = 0;
     restarting = true;
   }
 
-  function startNumber(value) {
+  // Set renderer based on start value
+  function updateRenderer(value) {
     animatedFeatureLayer.renderer = symbols.getRenderer(
       newSymbol,
       fieldToAnimate,
@@ -331,6 +420,7 @@ require([
     );
   }
 
+  // Anim func
   function animate(startValue) {
     let intervalFunc; //animation interval name
     let currentFrame = startValue;
@@ -348,7 +438,7 @@ require([
         currentFrame = startNo;
       }
 
-      startNumber(currentFrame);
+      updateRenderer(currentFrame);
 
       //animation loop.
       intervalFunc = setTimeout(function () {
@@ -363,8 +453,8 @@ require([
     frame();
   }
 
+  // Update dropdown options based on FeatureLayer URL updated
   function updateDropdown() {
-    updateBrowserURL(view.extent);
     stopAnimation();
 
     // Adding delay
@@ -373,110 +463,189 @@ require([
     }, 100);
   }
 
-  function createHTMLElements() {
-    // Create the UI container div
-    const uiContainer = document.createElement("div");
-    uiContainer.id = "ui-container";
+  // Listen for dom element changes
+  function setupListeners() {
+    document.getElementById("fs-url").addEventListener("blur", addFeatureLayer);
 
-    const header = document.createElement("calcite-block");
-    header.setAttribute("heading", "Pulse");
-    header.setAttribute("description", "Animate your FeatureLayers by field!");
-    uiContainer.appendChild(header);
+    document.getElementById("point-outline-btn").onclick = () => {
+      openModal("point-outline-modal");
+    };
+    document.getElementById("polygon-outline-btn").onclick = () => {
+      openModal("polygon-outline-modal");
+    };
 
-    // Create and append the div for GitHub link
-    const githubDiv = document.createElement("div");
-    githubDiv.id = "github";
-    uiContainer.appendChild(githubDiv);
-
-    // Create and append the anchor link with image inside the GitHub div
-    const githubLink = document.createElement("a");
-    githubLink.href = "//github.com/maplabs/pulse";
-    githubLink.target = "_blank";
-    githubDiv.appendChild(githubLink);
-
-    // Create and append the image inside the anchor link
-    const githubImage = document.createElement("img");
-    githubImage.width = 32;
-    githubImage.src = "images/githubLogo.svg";
-    githubImage.alt = "github icon";
-    githubLink.appendChild(githubImage);
-
-    // Create calcite-block-section element
-    const featureLayerSection = document.createElement("calcite-block-section");
-    featureLayerSection.setAttribute("open", "");
-    featureLayerSection.setAttribute("text", "Animation Settings");
-    featureLayerSection.setAttribute("toggle-display", "button");
-    featureLayerSection.setAttribute("icon-start", "annotate-tool");
-
-    // Create and append the paragraph for Feature Layer URL
-    const p1 = document.createElement("p");
-    p1.textContent = "Enter Feature Layer URL";
-    featureLayerSection.appendChild(p1);
-
-    // Create and append the input for Feature Layer URL
-    urlElement = document.createElement("calcite-input");
-    urlElement.id = "fs-url";
-    urlElement.placeholder = "Search location";
-    urlElement.type = "text";
-    featureLayerSection.appendChild(urlElement);
-
-    // Create and append the div for feature layer name
-    const featureLayerName = document.createElement("div");
-    featureLayerName.id = "feature-layer-name";
-    featureLayerName.textContent = "...";
-    featureLayerSection.appendChild(featureLayerName);
-
-    // Create and append the paragraph for selecting field to animate
-    const p2 = document.createElement("p");
-    p2.textContent = "Select Field to Animate";
-    featureLayerSection.appendChild(p2);
-
-    // Create and append the label for selection
-    const calciteLabel = document.createElement("calcite-label");
-    featureLayerSection.appendChild(calciteLabel);
-
-    // Create and append the select element inside the label
-    selectionElement = document.createElement("calcite-select");
-    selectionElement.id = "selection";
-    calciteLabel.appendChild(selectionElement);
-
-    // Create and append the paragraph for time in seconds
-    const p3 = document.createElement("p");
-    p3.textContent = "Time in Seconds";
-    featureLayerSection.appendChild(p3);
-
-    // Create and append the input for animation time
-    animationTimeElement = document.createElement("calcite-input");
-    animationTimeElement.id = "animation-time";
-    animationTimeElement.placeholder = "10 Seconds";
-    animationTimeElement.type = "text";
-    featureLayerSection.appendChild(animationTimeElement);
-
-    uiContainer.appendChild(featureLayerSection);
-
-    // Create calcite-block-section element
-    const calciteBlockSection = document.createElement("calcite-block-section");
-    calciteBlockSection.setAttribute("open", "false");
-    calciteBlockSection.setAttribute("text", "Change Basemap");
-    calciteBlockSection.setAttribute("toggle-display", "button");
-    calciteBlockSection.setAttribute("icon-start", "apps");
-
-    const basemapSection = document.createElement("div");
-    calciteBlockSection.appendChild(basemapSection);
-
-    uiContainer.appendChild(calciteBlockSection);
-
-    const basemapGallery = new BasemapGallery({
-      view: view,
-      container: basemapSection,
+    document.getElementById("selection").addEventListener("calciteSelectChange", function (e) {
+      urlHandler.updateField(e.target.value);
+      updateDropdown();
     });
 
-    return uiContainer;
+    document.getElementById("animation-time").addEventListener("calciteInputInput", function (e) {
+      urlHandler.updateDuration(e.target.value);
+      updateDropdown();
+    });
+
+    document.getElementById("blend-mode-selection").addEventListener("calciteSelectChange", function () {
+      if (document.getElementById("blend-mode-selection").value != "") {
+        animatedFeatureLayer.blendMode = document.getElementById("blend-mode-selection").value;
+        urlHandler.changeBlendMode(document.getElementById("blend-mode-selection").value);
+      } else {
+        animatedFeatureLayer.blendMode = "normal";
+        urlHandler.changeBlendMode("normal");
+      }
+    });
+
+    [document.getElementById("point-style-select")].forEach((input) => {
+      input.addEventListener("calciteSelectChange", function () {
+        updatePointSymbol(
+          document.getElementById("point-style-select").value,
+          document.getElementById("point-color-input").value,
+          document.getElementById("point-size-input").value,
+          document.getElementById("point-sls-width-input").value,
+          document.getElementById("point-sls-color-input").value,
+          document.getElementById("point-angle-input").value,
+          document.getElementById("point-xoffset-input").value,
+          document.getElementById("point-yoffset-input").value
+        );
+      });
+    });
+
+    [
+      document.getElementById("point-size-input"),
+      document.getElementById("point-xoffset-input"),
+      document.getElementById("point-yoffset-input"),
+      document.getElementById("point-angle-input"),
+      document.getElementById("point-color-input"),
+      document.getElementById("point-sls-width-input"),
+      document.getElementById("point-sls-color-input"),
+    ].forEach((input) => {
+      input.addEventListener("calciteInputInput", function () {
+        updatePointSymbol(
+          document.getElementById("point-style-select").value,
+          document.getElementById("point-color-input").value,
+          document.getElementById("point-size-input").value,
+          document.getElementById("point-sls-width-input").value,
+          document.getElementById("point-sls-color-input").value,
+          document.getElementById("point-angle-input").value,
+          document.getElementById("point-xoffset-input").value,
+          document.getElementById("point-yoffset-input").value
+        );
+      });
+    });
+
+    // Polygon Inpputs
+    [
+      document.getElementById("polygon-style-select"),
+      document.getElementById("polygon-sls-style-select"),
+    ].forEach((input) => {
+      input.addEventListener("calciteSelectChange", function () {
+        updatePolygonSymbol(
+          document.getElementById("polygon-style-select").value,
+          document.getElementById("polygon-color-input").value,
+          document.getElementById("polygon-sls-style-select").value,
+          document.getElementById("polygon-sls-width-input").value,
+          document.getElementById("polygon-sls-color-input").value
+        );
+      });
+    });
+
+    [
+      document.getElementById("polygon-color-input"),
+      document.getElementById("polygon-sls-color-input"),
+      document.getElementById("polygon-sls-width-input"),
+    ].forEach((input) => {
+      input.addEventListener("calciteInputInput", function () {
+        updatePolygonSymbol(
+          document.getElementById("polygon-style-select").value,
+          document.getElementById("polygon-color-input").value,
+          document.getElementById("polygon-sls-style-select").value,
+          document.getElementById("polygon-sls-width-input").value,
+          document.getElementById("polygon-sls-color-input").value
+        );
+      });
+    });
+
+
+    // Polyline Inpputs
+    [
+      document.getElementById("line-style-select")
+    ].forEach((input) => {
+      input.addEventListener("calciteSelectChange", function () {
+        updatePolylineSymbol(
+          document.getElementById("line-style-select").value,
+          document.getElementById("line-width-input").value,
+          document.getElementById("line-color-input").value
+        );
+      });
+    });
+
+    [
+      document.getElementById("line-color-input"),
+      document.getElementById("line-width-input")
+    ].forEach((input) => {
+      input.addEventListener("calciteInputInput", function () {
+        updatePolylineSymbol(
+          document.getElementById("line-style-select").value,
+          document.getElementById("line-width-input").value,
+          document.getElementById("line-color-input").value
+        );
+      });
+    });
   }
 
-  function setupListeners() {
-    urlElement.addEventListener("blur", addFeatureLayer);
-    selectionElement.addEventListener("calciteSelectChange", updateDropdown);
-    animationTimeElement.addEventListener("blur", updateDropdown);
+  // Symbols
+  function updatePolygonSymbol(style, color, lineStyle, lineWidth, lineColor) {
+    if (style === "choose a style") {
+      style = "solid";
+    }
+    if (lineStyle === "choose a style") {
+      lineStyle = "solid";
+    }
+
+    const symbol = {
+      style: style,
+      color: color,
+      outline: {
+        color: lineColor,
+        width: lineWidth,
+        style: lineStyle,
+      },
+    };
+
+    newSymbol = new SimpleFillSymbol(symbol);
+    urlHandler.changeSymbol(JSON.stringify(newSymbol.toJSON()));
+  }
+
+  function updatePointSymbol(style, color, size, outlineSize, outlineColor, angle, xOffset, yOffset) {
+    const symbol = {
+      style: style,
+      color: color,
+      size: size + "px",
+      angle: angle,
+      xoffset: xOffset,
+      yoffset: yOffset,
+      outline: {
+        style: "solid",
+        color: outlineColor,
+        width: outlineSize
+      },
+    };
+
+    newSymbol = new SimpleMarkerSymbol(symbol);
+    urlHandler.changeSymbol(JSON.stringify(newSymbol.toJSON()));
+  }
+
+  function updatePolylineSymbol(lineStyle, lineWidth, lineColor) {
+    if (lineStyle === "choose a style") {
+      lineStyle = "solid";
+    }
+
+    const symbol = {
+      color: lineColor,
+      width: lineWidth,
+      style: lineStyle,
+    };
+
+    newSymbol = new SimpleLineSymbol(symbol);
+    urlHandler.changeSymbol(JSON.stringify(newSymbol.toJSON()));
   }
 });

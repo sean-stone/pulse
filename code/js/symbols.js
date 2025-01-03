@@ -21,7 +21,7 @@ define([], function () {
         width: 0.1,
         color: "rgb(55, 55, 255)",
         opacity: 0.2,
-      }
+      },
     },
   };
 
@@ -38,6 +38,10 @@ define([], function () {
       if (geometryType === "esriGeometryPolygon") {
         return defaultSymbols.polygon;
       }
+    },
+
+    updateSymbolByGeometry: function (geometryType, symbol) {
+      defaultSymbols.point = symbol;
     },
 
     getRenderer: function (newSymbol, fieldToAnimate, value, stepNumber) {
