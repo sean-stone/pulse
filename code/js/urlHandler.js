@@ -56,7 +56,6 @@ define(["./js/defaultOptions.js"], function (defaultOptions) {
 
     // Method to change the symbol mode
     changeSymbol(symbol) {
-      console.log("xx")
       this.symbol = symbol;
     }
 
