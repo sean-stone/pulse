@@ -57,7 +57,7 @@ define([], function () {
               stops: [
                 {
                   value: value - stepNumber * 40,
-                  opacity: 0.0,
+                  opacity: 0,
                   //Change this to 0.1 if you always want it on screen during animation
                 },
                 {

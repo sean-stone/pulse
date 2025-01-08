@@ -11,11 +11,13 @@ require([
   "esri/symbols/SimpleMarkerSymbol",
   "esri/symbols/SimpleFillSymbol",
   "esri/symbols/SimpleLineSymbol",
+  "esri/widgets/Slider",
 
-  //   Custom modules
+  // Custom modules
   "./js/defaultOptions.js",
   "./js/urlHandler.js",
   "./js/symbols.js",
+  "./js/canvasRecorder.js",
 ], function (
   Map,
   MapView,
@@ -29,10 +31,12 @@ require([
   SimpleMarkerSymbol,
   SimpleFillSymbol,
   SimpleLineSymbol,
+  Slider,
 
   defaultOptions,
   urlHandler,
-  symbols
+  symbols,
+  canvasRecorder
 ) {
   const setIntervalSpeed = defaultOptions["refresh-speed-ms"]; //refresh speed in ms
 
@@ -41,7 +45,6 @@ require([
   let startNo; //lowest number in attribute
   let fieldToAnimate; //attribute selected
   let stepNumber; //increment value
-  let restarting = false; //flag to control removing animation
   let overRidingField; //casts url field as no.1 selection in attribute selector
   let newSymbol;
   let animatedFeatureLayer = new FeatureLayer();
@@ -60,7 +63,7 @@ require([
 
   const bgExpand = new Expand({
     view: view,
-    content: document.getElementById("ui-container"),
+    content: document.getElementById("pulse-widget-container"),
     expanded: true,
   });
 
@@ -112,8 +115,69 @@ require([
     if (basemapTitle) urlHandler.changeBasemap(basemapTitle);
   });
 
+  let animation = null;
+
+  const slider = new Slider({
+    container: "slider",
+    min: 0,
+    max: 1,
+    values: [1],
+    step: 1,
+    visibleElements: {
+      rangeLabels: true
+    }
+  });
+
+  const playButton = document.getElementById("playButton");
+
+  // When user drags the slider:
+  //  - stops the animation
+  //  - set the visualized year to the slider one.
+  function inputHandler(event) {
+    stopAnimation();
+    sliderValue.innerHTML = Math.floor(event.value);
+    slider.viewModel.setValue(0, event.value);
+    updateRenderer(Math.floor(event.value));
+  }
+
+  slider.on("thumb-drag", inputHandler);
+
+  playButton.addEventListener("click", () => {
+    if (playButton.classList.contains("toggled")) {
+      stopAnimation();
+    } else {
+      playButton.classList.add("toggled");
+      animation = animate(slider.values[0]);
+    }
+  });
+
+  function createSlider(min, max, step) {
+    slider.min = min
+    slider.max = max
+    slider.step = step
+    slider.viewModel.setValue(0, min)
+  }
+
   // When the view is ready
   view.when(function () {
+    // Add recording controls
+    document.getElementById("stop-record").disabled = true;
+
+    document.getElementById("start-record").addEventListener("click", function () {
+      canvasRecorder.startRecording(view.surface.children[0]);
+    });
+
+    document.getElementById("stop-record").addEventListener("click", function () {
+      canvasRecorder.stopRecording()
+    });
+
+    const copyButton = document.getElementById("copy-button");
+
+    copyButton.addEventListener("click", () => {
+      const copyText = document.getElementById("quote-text").innerText;
+      navigator.clipboard.writeText(copyText);
+    });
+
     setupListeners();
 
     // Check URL for paramaters, if there's some. Add it in.
@@ -131,7 +195,7 @@ require([
 
     map.basemap = mapConfigObj.basemap;
 
-    if (mapConfigObj.symbol != undefined && mapConfigObj.symbol != "undefined") {
+    if (mapConfigObj.symbol != undefined && mapConfigObj.symbol != "undefined" && newSymbol) {
       newSymbol = SimpleFillSymbol.fromJSON(JSON.parse(mapConfigObj.symbol));
       document.getElementById("polygon-style-select").value = newSymbol.style;
       document.getElementById("polygon-color-input").value = Object.values(newSymbol.color);
@@ -184,7 +248,8 @@ require([
 
   function showErrorLoadingFeatureLayer(errorMessage) {
     document.getElementById("fl-error").innerHTML = errorMessage;
-    document.getElementById("feature-layer-name").innerHTML = ""
+    document.getElementById("title").innerHTML = ""
+    document.getElementById("description").innerHTML = ""
     document.getElementById("fl-error").style.display = "block";
   }
 
@@ -253,9 +318,7 @@ require([
 
           animatedFeatureLayer.when(() => {
             stopAnimation();
-            setTimeout(() => {
-              play();
-            }, 300);
+            getMaxMin();
           });
         } else {
           map.remove(animatedFeatureLayer);
@@ -269,27 +332,29 @@ require([
     esriRequest(flURL + "?f=json", {
       responseType: "json",
     }).then((response) => {
-      const fieldsObj = response.data;
-      document.getElementById("feature-layer-name").innerHTML = fieldsObj.name;
+      const getFeatureLayerResponse = response.data;
+
+      document.getElementById("title").innerHTML = getFeatureLayerResponse.name;
+      document.getElementById("description").innerHTML = getFeatureLayerResponse.description;
       document.getElementById("selection").innerHTML = "";
 
-      const geometryType = fieldsObj.geometryType;
+      const geometryType = getFeatureLayerResponse.geometryType;
       showSymbolsBasedOnGeometryType(geometryType);
 
       if (newSymbol == undefined || newSymbol == "undefined") {
         newSymbol = symbols.getSymbolByGeometry(geometryType);
       }
 
-      for (let i = 0; i < fieldsObj.fields.length; i++) {
+      for (let i = 0; i < getFeatureLayerResponse.fields.length; i++) {
         if (
-          fieldsObj.fields[i].type == "esriFieldTypeSingle" ||
-          fieldsObj.fields[i].type == "esriFieldTypeSmallInteger" ||
-          fieldsObj.fields[i].type == "esriFieldTypeInteger" ||
-          fieldsObj.fields[i].type == "esriFieldTypeDouble"
+          getFeatureLayerResponse.fields[i].type == "esriFieldTypeSingle" ||
+          getFeatureLayerResponse.fields[i].type == "esriFieldTypeSmallInteger" ||
+          getFeatureLayerResponse.fields[i].type == "esriFieldTypeInteger" ||
+          getFeatureLayerResponse.fields[i].type == "esriFieldTypeDouble"
         ) {
           let opt = document.createElement("calcite-option");
-          opt.value = fieldsObj.fields[i].name;
-          opt.textContent = fieldsObj.fields[i].name;
+          opt.value = getFeatureLayerResponse.fields[i].name;
+          opt.textContent = getFeatureLayerResponse.fields[i].alias;
           document.getElementById("selection").appendChild(opt);
         }
       }
@@ -367,7 +432,6 @@ require([
 
     //queries the current feature layer url and field to work out start and end frame.
     getMaxMin();
-    restarting = false;
   }
 
   // Get min and max values based on field selected
@@ -405,21 +469,26 @@ require([
         difference / document.getElementById("animation-time").value;
       stepNumber = differencePerSecond / setIntervalSpeed;
       startNo = dataJSONObj.features[0].attributes.MinID;
-      animate(dataJSONObj.features[0].attributes.MinID);
+      playButton.classList.add("toggled");
+      animation = animate(dataJSONObj.features[0].attributes.MinID);
 
       // Adding empty frames at the start and end for fade in/out
       endNo += stepNumber * 40;
       startNo -= stepNumber * 2;
+
+      createSlider(startNo, endNo, stepNumber);
     });
   }
 
   // Stop animation
   function stopAnimation() {
-    updateRenderer(null);
-    stepNumber = 0;
-    startNo = 0;
-    endNo = 0;
-    restarting = true;
+    if (!animation) {
+      return;
+    }
+
+    animation.remove();
+    animation = null;
+    playButton.classList.remove("toggled");
   }
 
   // Set renderer based on start value
@@ -435,45 +504,43 @@ require([
 
   // Anim func
   function animate(startValue) {
-    let intervalFunc; //animation interval name
-    let currentFrame = startValue;
+    let animating = true;
+    let value = startValue;
 
-    function frame() {
-      if (restarting) {
-        clearTimeout(intervalFunc);
-        restarting = false;
+    const frame = (timestamp) => {
+      if (!animating) {
         return;
       }
 
-      currentFrame += stepNumber;
-
-      if (currentFrame > endNo) {
-        currentFrame = startNo;
+      value += stepNumber;
+      if (value > endNo) {
+        value = startNo;
       }
 
-      updateRenderer(currentFrame);
+      document.getElementById("sliderValue").innerHTML = Math.floor(value);
+      slider.viewModel.setValue(0, value);
+      updateRenderer(value);
 
-      //animation loop.
-      intervalFunc = setTimeout(function () {
-        //stops it from overloading.
-        requestAnimationFrame(function () {
-          frame();
-        });
-      }, setIntervalSpeed);
-    }
+      setTimeout(() => {
+        requestAnimationFrame(frame);
+      }, 1000 / 30);
+    };
 
-    //recusrive function, starting the animation.
     frame();
+
+    return {
+      remove: () => {
+        animating = false;
+      }
+    };
   }
 
   // Update dropdown options based on FeatureLayer URL updated
   function updateDropdown() {
     stopAnimation();
 
-    // Adding delay
-    setTimeout(() => {
-      play();
-    }, 100);
+    //queries the current feature layer url and field to work out start and end frame.
+    getMaxMin();
   }
 
   // Listen for dom element changes
@@ -581,7 +648,6 @@ require([
       });
     });
 
-
     // Polyline Inpputs
     [
       document.getElementById("line-style-select")
@@ -609,6 +675,55 @@ require([
     });
   }
 
+  const sliders = [
+    { id: 'brightness-slider', name: 'brightness', unit: '' },
+    { id: 'contrast-slider', name: 'contrast', unit: '%' },
+    { id: 'grayscale-slider', name: 'grayscale', unit: '' },
+    { id: 'hue-rotate-slider', name: 'hue-rotate', unit: 'deg' },
+    { id: 'invert-slider', name: 'invert', unit: '' },
+    { id: 'opacity-slider', name: 'opacity', unit: '' },
+    { id: 'saturate-slider', name: 'saturate', unit: '' },
+    { id: 'sepia-slider', name: 'sepia', unit: '' },
+    { id: 'blur-slider', name: 'blur', unit: 'px' }
+  ];
+
+  const dropShadowInputs = {
+    offsetX: document.getElementById('drop-shadow-offset-x-slider'),
+    offsetY: document.getElementById('drop-shadow-offset-y-slider'),
+    blurRadius: document.getElementById('drop-shadow-blur-slider')
+  };
+
+  const filterValues = {};
+
+  sliders.forEach(slider => {
+    const element = document.getElementById(slider.id);
+    filterValues[slider.name] = { value: element.value, unit: slider.unit };
+
+    element.addEventListener('calciteSliderInput', (event) => {
+      filterValues[slider.name].value = event.target.value;
+      updateFilters();
+    });
+  });
+
+  Object.values(dropShadowInputs).forEach(input => {
+    input.addEventListener('calciteSliderInput', updateFilters);
+  });
+
+  document.getElementById('drop-shadow-color-input').addEventListener('calciteInputInput', updateFilters);
+
+  function updateFilters() {
+    const filterString = Object.entries(filterValues)
+      .map(([key, { value, unit }]) => value ? `${key}(${value}${unit})` : '')
+      .join(' ');
+
+    const dropShadow = `drop-shadow(${dropShadowInputs.offsetX.value}px ${dropShadowInputs.offsetY.value}px ${dropShadowInputs.blurRadius.value}px ${document.getElementById('drop-shadow-color-input').value})`;
+    const fullFilter = [filterString, dropShadow].filter(Boolean).join(' ');
+
+    animatedFeatureLayer.effect = fullFilter ? fullFilter : '';
+  }
+
+  updateFilters();
+
   // Symbols
   function updatePolygonSymbol(style, color, lineStyle, lineWidth, lineColor) {
     if (style === "choose a style") {
@@ -630,6 +745,8 @@ require([
 
     newSymbol = new SimpleFillSymbol(symbol);
     urlHandler.changeSymbol(JSON.stringify(newSymbol.toJSON()));
+
+    updateRenderer(slider.values[0])
   }
 
   function updatePointSymbol(style, color, size, outlineSize, outlineColor, angle, xOffset, yOffset) {
@@ -649,6 +766,7 @@ require([
 
     newSymbol = new SimpleMarkerSymbol(symbol);
     urlHandler.changeSymbol(JSON.stringify(newSymbol.toJSON()));
+    updateRenderer(slider.values[0])
   }
 
   function updatePolylineSymbol(lineStyle, lineWidth, lineColor) {
@@ -664,5 +782,6 @@ require([
 
     newSymbol = new SimpleLineSymbol(symbol);
     urlHandler.changeSymbol(JSON.stringify(newSymbol.toJSON()));
+    updateRenderer(slider.values[0])
   }
 });

@@ -176,7 +176,7 @@ define(["./js/defaultOptions.js"], function (defaultOptions) {
       if(urlObj?.animateBy){
         mapConfig.changeAnimateBy(urlObj?.animateBy)
       } else {
-        mapConfig.changeBlendMode(defaultOptions.animateBy)
+        mapConfig.changeAnimateBy(defaultOptions.animateBy)
       }
     },
     updateAnimateBy: function(value){

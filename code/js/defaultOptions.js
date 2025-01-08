@@ -1,8 +1,8 @@
 define([], function () {
   return {
     "refresh-speed-ms": 16.6,
-    "featurelayer-url": "https://services9.arcgis.com/RHVPKKiFTONKtxq3/arcgis/rest/services/NOAA_METAR_current_wind_speed_direction_v1/FeatureServer/0",
-    "field": "TEMP",
+    "featurelayer-url": "https://services.arcgis.com/jIL9msH9OI208GCb/arcgis/rest/services/Average_Annual_Temperature/FeatureServer/0",
+    "field": "TminC",
     "duration": 3,
     "basemap": "dark-gray-vector",
     "blendMode": "normal",
