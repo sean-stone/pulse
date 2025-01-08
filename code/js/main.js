@@ -578,6 +578,10 @@ require([
       }
     });
 
+    document.getElementById("should-fade-out").addEventListener("calciteCheckboxChange", function () {
+      updateRenderer(slider.values[0]);
+    });
+
     [document.getElementById("point-style-select")].forEach((input) => {
       input.addEventListener("calciteSelectChange", function () {
         updatePointSymbol(

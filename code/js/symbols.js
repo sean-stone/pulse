@@ -45,6 +45,14 @@ define([], function () {
     },
 
     getRenderer: function (newSymbol, fieldToAnimate, value, stepNumber, animationType) {
+      let firstStep = 0;
+      let secondStep = 0.3;
+
+      if (!document.getElementById("should-fade-out").checked) {
+        firstStep = 1
+        secondStep = 1
+      }
+
       if (animationType === "opacity") {
         return {
           type: "simple",
@@ -57,12 +65,12 @@ define([], function () {
               stops: [
                 {
                   value: value - stepNumber * 40,
-                  opacity: 0,
+                  opacity: firstStep,
                   //Change this to 0.1 if you always want it on screen during animation
                 },
                 {
                   value: value - stepNumber * 20,
-                  opacity: 0.3,
+                  opacity: secondStep,
                 },
                 {
                   value: value,
@@ -77,6 +85,7 @@ define([], function () {
           ],
         };
       }
+
       return {
         type: "simple",
         symbol: newSymbol,
@@ -88,12 +97,12 @@ define([], function () {
             stops: [
               {
                 value: value - stepNumber * 40,
-                size: 0.0,
+                size: firstStep,
                 //Change this to 0.1 if you always want it on screen during animation
               },
               {
                 value: value - stepNumber * 20,
-                size: 0.3,
+                size: secondStep,
               },
               {
                 value: value,
