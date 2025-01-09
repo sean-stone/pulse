@@ -18,7 +18,7 @@ define([], function () {
 
   function handleRecordingStop() {
     const attributionSource = document.querySelector(".esri-attribution__sources");
-    const blob = new Blob(recordedChunks, { type: "video/webm" });
+    const blob = new Blob(recordedChunks, { type: "video/mp4" });
     const url = URL.createObjectURL(blob);
 
     const downloadButton = document.getElementById("download-btn");
@@ -45,7 +45,7 @@ define([], function () {
       // Capture canvas stream at 30 FPS
       const stream = canvas.captureStream(30);
       const options = {
-        mimeType: "video/webm; codecs=vp9",
+        mimeType: 'video/mp4; codecs="avc1.424028, mp4a.40.2"',
         videoBitsPerSecond: 6000000,
       };
 
