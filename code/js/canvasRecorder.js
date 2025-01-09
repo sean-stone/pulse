@@ -46,7 +46,7 @@ define([], function () {
       const stream = canvas.captureStream(30);
       const options = {
         mimeType: 'video/mp4; codecs="avc1.424028, mp4a.40.2"',
-        videoBitsPerSecond: 10000000,
+        videoBitsPerSecond: 15000000,
       };
 
       mediaRecorder = new MediaRecorder(stream, options);
