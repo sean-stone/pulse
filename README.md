@@ -1,11 +1,8 @@
 Pulse
+This application animates any public feature service (or service with token).
 
-This application animates any public feature service (or service with token) with the new WebGL Renderer in the ArcGIS API for JavaScript.
+Includes the ability to create an animation of a featurelayer. Animate by opacity, size (for point/line) and with a bunch of styling options.
 
+Exports canvas to .mp4 video format. Note: as it records the cavnas, we then need to ensure attribution is correctly added. 
 
-
-To find out more information about how to use this application, also some useful examples. Please visit the geonet blog [here](https://community.esri.com/people/smcgeeesriuk-esridist/blog/2018/06/29/feature-layer-animations-with-webgl).
-
-
-
-View the application [here](https://maplabs.github.io/pulse/index.html).
+View the application [here]([https://maplabs.github.io/pulse/index.html](https://seanst.one/demos/pulse)).
