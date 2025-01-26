@@ -44,6 +44,11 @@ body {
   max-height: 68vh;
 }
 
+#github-container{
+  padding: 7px;
+  max-width: 210px;
+}
+
 /* Esri Styles */
 .esri-view-width-greater-than-large .esri-ui-corner .esri-basemap-gallery {
   width: 250px;
