@@ -67,6 +67,13 @@ require([
     expanded: true,
   });
 
+  const codeExpand = new Expand({
+    view: view,
+    expandIcon: "code",
+    collapseIcon: "code",
+    content: document.getElementById("github-container")
+  });
+
   reactiveUtils.watch(() => {
     const mobileSize =
       view.heightBreakpoint === "xsmall" || view.widthBreakpoint === "xsmall";
@@ -77,6 +84,7 @@ require([
   });
 
   view.ui.add(bgExpand, "top-right");
+  view.ui.add(codeExpand, "top-left");
 
   new BasemapGallery({
     view: view,
