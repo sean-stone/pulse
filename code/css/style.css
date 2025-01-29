@@ -1,90 +1,82 @@
-body{
-  margin: 0px;
-}
-#viewDiv {
-  background: #232227;
-  padding: 0;
+body {
   margin: 0;
-  height: 100%;
-  width: 100%;
 }
-#configFs {
-  position: absolute;
-  width: 22%;
-  padding: 20px;
-  margin: .5rem 0 1rem 0;
-  background-color: #221c38;
-  color: white;
-  bottom: 0px;
-  right: 0px;
-  z-index: 99999;
-  opacity: 0.2;
-  -webkit-transition: .5s;
-  transition: all .5s;
-}
+
+/* General Styles */
 #feature-layer-name {
   font-style: italic;
-  overflow: hidden;
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
 }
-#configFs p, a{
-  color: white;
-  font-family: Arial;
+
+#fl-error {
+  background: #ffeeee;
+  margin: 10px;
+  padding: 10px;
+  border-radius: 8px;
 }
-#configFs:hover {
-  opacity: 1;
-  -webkit-transition: .2s;
-  transition: opacity .2s;
+
+#fs-url,
+#play {
+  padding: 5px;
+  background: white;
 }
-#fs-text {
-  padding:5px;
-  width: 100%;
-}
+
 #fs-url {
-  padding:5px;
   width: 100%;
-  background: white;
-  border-radius: 5px;
-  border-width: 0px;
-  border-bottom-color: green;
-  border-bottom-width: 4px;
 }
-#play{
-  padding:5px;
+
+#play {
   width: 15%;
-  background: white;
   border-radius: 5px;
-  border-width: 0px;
+  border: none;
 }
-#play:hover{
-  color: #5ab35a
+
+.symbol-input {
+  width: calc(100% - 8px);
+  padding: 4px;
+  margin-bottom: 16px;
 }
-#selection {
-  padding:5px;
-  width: 35%;
-  background: white;
-  border-radius: 5px;
-  border-width: 0px;
-  border-bottom-color: green;
-  border-bottom-width: 4px;
+
+/* Pulse Widget Container */
+#pulse-widget-container {
+  padding: 20px;
+  width: 300px;
+  overflow-y: scroll;
+  max-height: 68vh;
 }
-#animation-time {
-  padding:5px;
-  width: 12%;
-  background: white;
-  border-radius: 5px;
-  border-width: 0px;
-  border-bottom-color: green;
-  border-bottom-width: 4px;
+
+#github-container{
+  padding: 7px;
+  max-width: 210px;
 }
-#footer{
-  bottom: 35px;
-  width: 24px;
-  float: right;
-  opacity: 0.6;
+
+/* Esri Styles */
+.esri-view-width-greater-than-large .esri-ui-corner .esri-basemap-gallery {
+  width: 250px;
 }
+
+/* Media Query */
+@media only screen and (max-width: 540px) {
+  #pulse-widget-container {
+    width: calc(100% - 20px);
+    padding: 10px;
+  }
+
+  #github {
+    display: inline-block;
+    position: absolute;
+    height: 60px;
+    width: 10px;
+    padding: 54px;
+  }
+
+  .symbol-input {
+    width: auto;
+    min-width: 30px;
+    display: block;
+  }
+}
+
+/* Application Structure */
 #applicationDiv {
   position: absolute;
   width: 100%;
@@ -93,25 +85,86 @@ body{
   flex-direction: column;
   overflow: hidden;
 }
+
 #viewDiv {
+  background: #232227;
   flex: 1 1 auto;
+  order: 1;
+  width: 100%;
+  height: 100%;
+}
+
+#titleDiv {
+  font-weight: 400;
+  font-style: normal;
+  font-size: 1.2rem;
+  padding: 10px;
+}
+
+/* Slider Container */
+#sliderContainer {
+  display: flex;
+  flex-flow: row;
+  flex: 0 0 80px;
+  order: 2;
+  padding: 0 12px;
+}
+
+#sliderValue {
+  display: flex;
+  justify-content: center;
+  flex-direction: column;
+  text-align: center;
+  font-size: 300%;
+  flex: 0 0 100px;
   order: 1;
 }
 
-
-@media only screen and (max-width: 1180px) {
-  #configFs {
-      width: calc(40% - 40px);
-  }
+#sliderInnerContainer {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  flex: 1 1 auto;
+  order: 2;
+  padding: 0 20px;
 }
 
-@media only screen and (max-width: 750px) {
-  #configFs {
-      width: calc(100% - 40px);
-      opacity:1;
-  }
-  #play {
-    width:9%;
-  }
+#slider {
+  width: 100%;
 }
 
+/* Play/Stop Toggle Button */
+#playButton {
+  flex: 0 0 100px;
+  order: 3;
+  margin: 20px 0;
+}
+
+.toggle-button {
+  display: flex;
+}
+
+.toggle-button.toggled .toggle-button-icon {
+  color: #cc1b1b;
+}
+
+.toggle-button .toggle-button-icon {
+  color: #1bcc1b;
+}
+
+.toggle-button > :nth-child(2) {
+  display: none;
+}
+
+.toggle-button.toggled > :nth-child(1) {
+  display: none;
+}
+
+.toggle-button.toggled > :nth-child(2) {
+  display: block;
+}
+
+/* Stepper */
+.stepper-content {
+  padding-right: 20px;
+}

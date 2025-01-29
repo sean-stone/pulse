@@ -1,29 +1,375 @@
 <head>
-    <meta name="viewport" content="width=device-width, minimum-scale=1.0, initial-scale=1, user-scalable=no" />
-    <meta charset="utf-8">
-    <link rel="stylesheet" href="//js.arcgis.com/4.29/esri/css/main.css">
-    <link rel="stylesheet" href="css/style.css">
-    <script src="//js.arcgis.com/4.29/"></script>
-    <script src="js/main.js"></script>
- </head>
- <body>
+  <meta name="viewport" content="width=device-width, minimum-scale=1.0, initial-scale=1, user-scalable=no" />
+  <meta charset="utf-8" />
+  <link rel="stylesheet" href="https://js.arcgis.com/4.31/esri/css/main.css" />
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" type="text/css" href="https://js.arcgis.com/calcite-components/2.13.2/calcite.css" />
+
+  <script src="https://js.arcgis.com/4.31/"></script>
+  <script src="js/main.js"></script>
+  <script type="module" src="https://js.arcgis.com/calcite-components/2.13.2/calcite.esm.js"></script>
+</head>
+
+<body>
+  <!-- App -->
+  <div id="applicationDiv">
+
+    <!-- View -->
     <div id="viewDiv"></div>
-    <div id="configFs">
-       <p>Enter feature layer URL</p>
-       <p>
-          <input type="text" id="fs-url" value=""  placeholder="Enter value here" />
-       <div id="feature-layer-name">...</div>
-       <p>Select attribute to animate</p>
-       <p>
-          <select id="selection">
-             <option></option>
-          </select>
-          for 
-          <input type="text" id="animation-time" value="" /> seconds
-          <button id="play">►</button>
-       </p>
-       <div id="footer">
-          <div id="github"><a href="//github.com/maplabs/pulse" target="_blank"><img src="images/githubLogo.svg" alt="Italian Trulli"></a></div>
-       </div>
+
+    <!-- Slider -->
+    <div id="sliderContainer" class="esri-widget">
+      <span id="sliderValue"></span>
+      <div id="sliderInnerContainer">
+        <div id="slider"></div>
+      </div>
+
+      <!-- Play/pause buttons -->
+      <div id="playButton" class="esri-widget esri-widget--button toggle-button">
+        <div>
+          <span class="toggle-button-icon esri-icon-play" aria-label="play icon"></span>
+          Play
+        </div>
+        <div>
+          <span class="toggle-button-icon esri-icon-pause" aria-label="pause icon"></span>
+          Pause
+        </div>
+      </div>
     </div>
- </body>
+  </div>
+
+  <!-- Widget -->
+  <div id="pulse-widget-container">
+    <!-- Header -->
+    <calcite-block heading="Pulse" description="Animate Public FeatureLayers by field!"></calcite-block>
+
+    <!-- Sections -->
+    <calcite-stepper layout="vertical">
+      <calcite-stepper-item heading="Data" selected>
+        <div class="stepper-content">
+          <calcite-label>Set Feature Layer
+            <calcite-input id="fs-url" placeholder="Add Feature Layer URL" type="text"></calcite-input>
+          </calcite-label>
+          <div id="fl-error"></div>
+          <h2 id="title"></h2>
+          <p id="description"></p>
+          <calcite-label>Field To Animate
+            <calcite-select id="selection"></calcite-select>
+          </calcite-label>
+        </div>
+      </calcite-stepper-item>
+
+      <calcite-stepper-item heading="Animation Settings">
+        <div class="stepper-content">
+          <calcite-label>Animation Duration (seconds)
+            <calcite-input min="0" value="10" type="number" scale="s" id="animation-time"></calcite-input>
+          </calcite-label>
+
+          <calcite-label>Animation Type
+            <calcite-select id="animate-option">
+              <calcite-option value="opacity">opacity</calcite-option>
+              <calcite-option value="size">size</calcite-option>
+            </calcite-select>
+          </calcite-label>
+
+          <calcite-notice open icon scale="s">
+            <div slot="message">Size is not available against polygon features</div>
+          </calcite-notice>
+
+          </br>
+
+          <calcite-label layout="inline">
+            <calcite-checkbox id="should-fade-out" checked></calcite-checkbox>
+            Fade out
+          </calcite-label>
+
+        </div>
+      </calcite-stepper-item>
+
+      <calcite-stepper-item heading="Symbol Style">
+        <div class="stepper-content">
+          <!--- pointSymbol -->
+          <div id="point-section">
+            <calcite-label>style
+              <calcite-select scale="s" id="point-style-select">
+                <calcite-option value="circle" selected>circle</calcite-option>
+                <calcite-option value="cross">cross</calcite-option>
+                <calcite-option value="diamond">diamond</calcite-option>
+                <calcite-option value="square">square</calcite-option>
+                <calcite-option value="triangle">triangle</calcite-option>
+                <calcite-option value="x">x</calcite-option>
+              </calcite-select>
+            </calcite-label>
+            <calcite-label>color
+              <calcite-input placeholder="#FFFFFF" value="#FFFFFF" type="color" scale="s" id="point-color-input">
+              </calcite-input>
+            </calcite-label>
+            <calcite-label>outline
+              <calcite-button id="point-outline-btn" scale="s">Set Outline</calcite-button>
+            </calcite-label>
+            <calcite-label>size (px)
+              <calcite-input id="point-size-input" value="20" type="number" scale="s" min="0"></calcite-input>
+            </calcite-label>
+            <calcite-label>xoffset (px)
+              <calcite-input id="point-xoffset-input" placeholder="0" type="number" scale="s"></calcite-input>
+            </calcite-label>
+            <calcite-label>yoffset (px)
+              <calcite-input id="point-yoffset-input" placeholder="0" type="number" scale="s"></calcite-input>
+            </calcite-label>
+            <calcite-label>angle (degrees)
+              <calcite-input id="point-angle-input" placeholder="0" type="number" scale="s" min="-360" max="360">
+              </calcite-input>
+            </calcite-label>
+          </div>
+
+          <!--- polygonSymbol -->
+          <div id="polygon-section">
+            <calcite-label>style
+              <calcite-select scale="s" id="polygon-style-select">
+                <calcite-option selected value="solid">solid</calcite-option>
+                <calcite-option value="backward-diagonal">backward-diagonal</calcite-option>
+                <calcite-option value="cross">cross</calcite-option>
+                <calcite-option value="diagonal-cross">diagonal-cross</calcite-option>
+                <calcite-option value="forward-diagonal">forward-diagonal</calcite-option>
+                <calcite-option value="horizontal">horizontal</calcite-option>
+                <calcite-option value="none">none</calcite-option>
+                <calcite-option value="vertical">vertical</calcite-option>
+              </calcite-select>
+            </calcite-label>
+            <calcite-label>outline
+              <calcite-button id="polygon-outline-btn" scale="s">Set Outline</calcite-button>
+            </calcite-label>
+            <calcite-label>color
+              <calcite-input placeholder="#FFFFFF" type="color" scale="s" id="polygon-color-input" format="rgb">
+              </calcite-input>
+            </calcite-label>
+          </div>
+
+          <!--- polylineSymbol -->
+          <div id="polyline-section">
+            <calcite-label>style
+              <calcite-select scale="s" id="line-style-select">
+                <calcite-option selected value="solid">solid</calcite-option>
+                <calcite-option value="dash">dash</calcite-option>
+                <calcite-option value="dash-dot">dash-dot</calcite-option>
+                <calcite-option value="dot">dot</calcite-option>
+                <calcite-option value="long-dash">long-dash</calcite-option>
+                <calcite-option value="long-dash-dot">long-dash-dot</calcite-option>
+                <calcite-option value="long-dash-dot-dot">long-dash-dot-dot</calcite-option>
+                <calcite-option value="none">none</calcite-option>
+                <calcite-option value="short-dash">short-dash</calcite-option>
+                <calcite-option value="short-dash-dot">short-dash-dot</calcite-option>
+                <calcite-option value="short-dash-dot-dot">short-dash-dot-dot</calcite-option>
+                <calcite-option value="short-dot">short-dot</calcite-option>
+              </calcite-select>
+            </calcite-label>
+            <calcite-label>width
+              <calcite-input min="0" value="1" type="number" scale="s" id="line-width-input"></calcite-input>
+            </calcite-label>
+            <calcite-label>color
+              <calcite-input placeholder="Placeholder" type="color" value="#FFFFFF" scale="s" id="line-color-input"
+                format="rgb">
+              </calcite-input>
+            </calcite-label>
+          </div>
+        </div>
+      </calcite-stepper-item>
+
+      <calcite-stepper-item heading="Layer Styles">
+        <div class="stepper-content">
+          <calcite-label>Blend Mode
+            <calcite-select id="blend-mode-selection">
+              <calcite-option value="">None</calcite-option>
+              <calcite-option value="average">Average</calcite-option>
+              <calcite-option value="color-burn">Color Burn</calcite-option>
+              <calcite-option value="color-dodge">Color Dodge</calcite-option>
+              <calcite-option value="color">Color</calcite-option>
+              <calcite-option value="darken">Darken</calcite-option>
+              <calcite-option value="destination-atop">Destination Atop</calcite-option>
+              <calcite-option value="destination-in">Destination in</calcite-option>
+              <calcite-option value="destination-out">Destination out</calcite-option>
+              <calcite-option value="destination-over">Destination over</calcite-option>
+              <calcite-option value="difference">Difference</calcite-option>
+              <calcite-option value="exclusion">Exclusion</calcite-option>
+              <calcite-option value="hard-light">Hard Light</calcite-option>
+              <calcite-option value="hue">Hue</calcite-option>
+              <calcite-option value="invert">Invert</calcite-option>
+              <calcite-option value="lighten">Lighten</calcite-option>
+              <calcite-option value="lighter">Lighter</calcite-option>
+              <calcite-option value="luminosity">Luminosity</calcite-option>
+              <calcite-option value="multiply">Multiply</calcite-option>
+              <calcite-option value="normal">Normal</calcite-option>
+              <calcite-option value="overlay">Overlay</calcite-option>
+              <calcite-option value="saturation">Saturation</calcite-option>
+              <calcite-option value="screen">Screen</calcite-option>
+              <calcite-option value="soft-light">Soft Light</calcite-option>
+              <calcite-option value="source-atop">Source Atop</calcite-option>
+              <calcite-option value="source-in">Source In</calcite-option>
+              <calcite-option value="source-out">Source Out</calcite-option>
+              <calcite-option value="vivid-light">Vivid Light</calcite-option>
+              <calcite-option value="xor">Xor</calcite-option>
+            </calcite-select>
+          </calcite-label>
+
+          <h3>CSS Effects</h3>
+          <calcite-label class="filter-control">
+            Brightness
+            <calcite-slider min="0" max="5" step="0.1" value="1" id="brightness-slider"></calcite-slider>
+          </calcite-label>
+
+          <calcite-label class="filter-control">
+            Contrast
+            <calcite-slider min="0" max="200" step="1" value="100" id="contrast-slider"></calcite-slider>
+          </calcite-label>
+
+          <calcite-label class="filter-control">
+            Grayscale
+            <calcite-slider min="0" max="1" step="0.1" value="0" id="grayscale-slider"></calcite-slider>
+          </calcite-label>
+
+          <calcite-label class="filter-control">
+            Hue-Rotate
+            <calcite-slider min="0" max="360" step="1" value="0" id="hue-rotate-slider"></calcite-slider>
+          </calcite-label>
+
+          <calcite-label class="filter-control">
+            Invert
+            <calcite-slider min="0" max="1" step="0.1" value="0" id="invert-slider"></calcite-slider>
+          </calcite-label>
+
+          <calcite-label class="filter-control">
+            Opacity
+            <calcite-slider min="0" max="1" step="0.1" value="1" id="opacity-slider"></calcite-slider>
+          </calcite-label>
+
+          <calcite-label class="filter-control">
+            Saturate
+            <calcite-slider min="0" max="5" step="0.1" value="1" id="saturate-slider"></calcite-slider>
+          </calcite-label>
+
+          <calcite-label class="filter-control">
+            Sepia
+            <calcite-slider min="0" max="1" step="0.1" value="0" id="sepia-slider"></calcite-slider>
+          </calcite-label>
+
+          <calcite-label class="filter-control">
+            Blur
+            <calcite-slider min="0" max="20" step="1" value="0" id="blur-slider"></calcite-slider>
+          </calcite-label>
+
+          <calcite-label class="filter-control">
+            Drop Shadow Offset X
+            <calcite-slider min="-50" max="50" step="1" value="0" id="drop-shadow-offset-x-slider"></calcite-slider>
+          </calcite-label>
+
+          <calcite-label class="filter-control">
+            Drop Shadow Offset Y
+            <calcite-slider min="-50" max="50" step="1" value="0" id="drop-shadow-offset-y-slider"></calcite-slider>
+          </calcite-label>
+
+          <calcite-label class="filter-control">
+            Drop Shadow Blur Radius
+            <calcite-slider min="0" max="50" step="1" value="0" id="drop-shadow-blur-slider"></calcite-slider>
+          </calcite-label>
+
+          <calcite-label class="filter-control">
+            Drop Shadow Color
+            <calcite-input type="color" value="#000000" id="drop-shadow-color-input"></calcite-input>
+          </calcite-label>
+        </div>
+      </calcite-stepper-item>
+
+      <calcite-stepper-item heading="Basemap">
+        <div id="basemap-gallery"></div>
+      </calcite-stepper-item>
+
+      <calcite-stepper-item heading="Download Shareable Video">
+        <calcite-notice open icon scale="s">
+          <div slot="message">Download the animation as a .mp4 video! Then you're able to share directly to your social
+            media the
+            map animations you've created.</div>
+        </calcite-notice>
+
+        </br>
+
+        <calcite-notice kind="danger" open icon scale="s">
+          <div slot="message">Attirbution is required.</div>
+        </calcite-notice>
+        </br>
+
+        <calcite-button icon-start="video" kind="danger" id="start-record">Record</calcite-button>
+        <calcite-button icon-start="circle-stop-f" id="stop-record">Stop record</calcite-button>
+
+        <calcite-card id="copy-card" style="display:none;">
+          <blockquote id="quote-text"
+            style="font-size: 1.2em; margin: 0; font-style: italic; color: var(--calcite-ui-brand);"></blockquote>
+          <div style="margin-top: 0.5em; display: flex; align-items: center; gap: 0.5em;">
+            <calcite-button id="copy-button" icon-start="copy-to-clipboard" scale="s" appearance="outline">
+              Copy
+            </calcite-button>
+            <calcite-icon icon="check-circle" id="copy-success" scale="s"
+              style="display: none; color: var(--calcite-ui-success);"></calcite-icon>
+          </div>
+        </calcite-card>
+
+        <calcite-button id="download-btn" style="display:none;" icon-start="download">Download
+        </calcite-button>
+      </calcite-stepper-item>
+    </calcite-stepper>
+
+    <!-- Modals -->
+    <!-- Point outline -->
+    <calcite-modal id="point-outline-modal" width="300">
+      <h3 slot="header">SimpleLineSymbol</h3>
+      <div slot="content">
+        <calcite-label>width
+          <calcite-input min="0" value="0" width="1" type="number" scale="s" id="point-sls-width-input">
+          </calcite-input>
+        </calcite-label>
+        <calcite-label>color
+          <calcite-input placeholder="Placeholder" type="color" scale="s" id="point-sls-color-input" format="rgb">
+          </calcite-input>
+        </calcite-label>
+      </div>
+    </calcite-modal>
+
+    <!-- Polygon outline -->
+    <calcite-modal id="polygon-outline-modal" width="300">
+      <h3 slot="header">SimpleLineSymbol</h3>
+      <div slot="content">
+        <calcite-label>style
+          <calcite-select scale="s" id="polygon-sls-style-select">
+            <calcite-option selected value="solid">solid</calcite-option>
+            <calcite-option value="dash">dash</calcite-option>
+            <calcite-option value="dash-dot">dash-dot</calcite-option>
+            <calcite-option value="dot">dot</calcite-option>
+            <calcite-option value="long-dash">long-dash</calcite-option>
+            <calcite-option value="long-dash-dot">long-dash-dot</calcite-option>
+            <calcite-option value="long-dash-dot-dot">long-dash-dot-dot</calcite-option>
+            <calcite-option value="none">none</calcite-option>
+            <calcite-option value="short-dash">short-dash</calcite-option>
+            <calcite-option value="short-dash-dot">short-dash-dot</calcite-option>
+            <calcite-option value="short-dash-dot-dot">short-dash-dot-dot</calcite-option>
+            <calcite-option value="short-dot">short-dot</calcite-option>
+          </calcite-select>
+        </calcite-label>
+        <calcite-label>width
+          <calcite-input min="0" value="1" type="number" scale="s" id="polygon-sls-width-input">
+          </calcite-input>
+        </calcite-label>
+        <calcite-label>color
+          <calcite-input placeholder="Placeholder" type="color" scale="s" id="polygon-sls-color-input" format="rgb">
+          </calcite-input>
+        </calcite-label>
+      </div>
+    </calcite-modal>
+  </div>
+
+  <!-- GitHub link -->
+   <div id="github-container">
+    Want to checkout the code? It's available on GitHub! <href></href>
+    <calcite-link target="_blank" href="https://github.com/sean-stone/pulse">
+      See repo
+    </calcite-link>
+  </div>
+</body>
